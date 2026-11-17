@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Exact Calculator</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#6b6a65;--key:#ecebe6;--acc:#b3261e;--bd:#d9d7cf;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--card:#232321;--tx:#f1f0ea;--mut:#a3a199;--key:#34342f;--acc:#ff8a80;--bd:#44433d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171716;--card:#232321;--tx:#f1f0ea;--mut:#a3a199;--key:#34342f;--acc:#ff8a80;--bd:#44433d;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center;padding:16px}
+.calc{width:100%;max-width:920px;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;display:grid;grid-template-columns:1fr minmax(300px,370px);gap:24px;align-items:start}
+.side{position:sticky;top:16px;order:2}
+.main{min-width:0;order:1}
+.kt{display:none;width:100%;padding:4px;font-size:12px;background:none;color:var(--mut);margin-bottom:4px}
+.ed{scroll-margin:8px 0}
+@media (max-width:720px),(hover:none) and (pointer:coarse){
+html,body{height:100%;margin:0;overflow:hidden}
+body{padding:0;display:block}
+.calc{display:flex;flex-direction:column;align-items:stretch;gap:0;width:100%;max-width:none;padding:0;border:0;border-radius:0;height:100vh;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.main{order:1;flex:1 1 auto;min-height:0;display:block;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:10px 10px 0}
+.out{position:static;max-height:none;overflow:visible;margin:12px 0 14px;border-top:1px solid var(--bd)}
+.hint{display:none}
+.side{order:2;flex:none;position:relative;z-index:6;width:100%;margin:0;background:var(--card);border-radius:16px 16px 0 0;box-shadow:0 -6px 18px rgba(0,0,0,.18);padding:2px 8px 8px}
+.grid{gap:5px;margin-top:0;grid-template-rows:repeat(7,clamp(38px,6.4vh,48px))}
+.grid button{padding:0;font-size:14px}
+.kt{display:block}
+.side.collapsed .grid{display:none}
+.ed{scroll-margin:10px 0}
+}
+input{width:100%;font-size:20px;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-family:ui-monospace,Menlo,monospace}
+.out{min-height:70px;padding:10px 4px;font-size:20px;display:flex;flex-direction:column;justify-content:flex-start;gap:2px}
+.dec{font-size:13px;color:var(--mut)}
+.err{font-size:13px;color:var(--acc)}
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 4px;line-height:1.2;font-size:.85em}
+.fr>span:first-child{border-bottom:1.5px solid currentColor;padding:0 4px}
+.rt{border-top:1.5px solid currentColor;padding:0 2px}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+button{font-size:20px;padding:14px 0;border:0;border-radius:10px;background:var(--key);color:var(--tx);cursor:pointer}
+button.op{color:var(--acc);font-weight:600}
+button.eq{background:var(--acc);color:var(--bg)}
+.grid button{font-size:14px;padding:12px 0;min-width:0;overflow:hidden;white-space:nowrap}
+.grid button.num{font-size:19px}
+.grid button.sh.on{background:var(--acc2);color:var(--bg);font-weight:700;box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--acc2)}
+.grid button.alt-on{color:var(--acc2);font-weight:700}
+.grid button.ac{background:var(--key);background:color-mix(in srgb,var(--acc) 24%,var(--key));color:var(--acc);font-weight:700;box-shadow:inset 0 0 0 1.5px var(--acc)}
+.grid button.tall{grid-row:span 2;font-size:26px}
+.grid button sup,.grid button sub{font-size:.7em;line-height:0}
+button:active{opacity:.7}
+.hint{font-size:12px;color:var(--mut);margin:10px 2px 0}
+.ed{user-select:none;-webkit-user-select:none;cursor:text;min-height:64px;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);font-size:24px;display:flex;align-items:center;flex-wrap:wrap;overflow-x:auto;outline:none}
+.ed:focus{border-color:var(--acc)}
+.sq{display:inline-flex;align-items:center;min-height:1.2em}
+.sq.ph{min-width:.7em;min-height:1em;border:1px dashed var(--mut);border-radius:2px;margin:0 1px}
+.ef{display:inline-flex;flex-direction:column;align-items:center;margin:0 3px;font-size:.9em}
+.ef>.sq:first-child{border-bottom:1.5px solid currentColor;padding:0 3px;justify-content:center}
+.ef>.sq{min-width:.8em;justify-content:center}
+.sx{display:inline-block;position:relative;padding-left:.62em;vertical-align:baseline}
+.sx>.sq{border-top:1.5px solid currentColor;padding:1px 2px 0;min-height:0}
+.rd{position:absolute;left:0;top:0;width:.62em;height:100%;overflow:visible}
+.nr{display:inline-flex;align-items:flex-start}
+.ni{font-size:.62em;margin-right:-.1em}
+.lg{display:inline-flex;align-items:center}
+.ls{font-size:.62em;align-self:flex-end;margin:0 1px}
+.pw{display:inline-flex;font-size:.65em;align-self:flex-start;margin-left:1px}
+.caret{display:inline-block;width:2px;height:1.15em;background:var(--acc);animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+.grid{margin-top:4px}
+.bar{position:relative;margin-bottom:10px}
+.modeb{width:auto;padding:8px 14px;font-size:15px;font-weight:600;background:var(--key)}
+.menu{position:absolute;top:100%;left:0;z-index:5;margin-top:4px;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:4px;display:flex;flex-direction:column;width:236px;max-width:calc(100vw - 20px)}
+.menu[hidden]{display:none}
+.menu button{text-align:left;padding:9px 12px;font-size:15px;background:none;white-space:nowrap}
+.menu .mh{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);padding:8px 12px 2px;white-space:nowrap}
+.menu .sep{height:1px;background:var(--bd);margin:4px 8px}
+#amenu{width:150px}
+.menu button.on{color:var(--acc);font-weight:600}
+.ed.sm{flex:1;min-width:0;min-height:52px;font-size:20px;padding:6px 8px}
+.res{font-size:16px;line-height:1.7}
+.res .lb{color:var(--mut);margin-right:6px}
+.res .dec{margin-left:8px}
+.fld{margin-bottom:8px}
+.fld .lb2{font-size:13px;color:var(--mut);margin-bottom:3px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;align-items:center}
+.chips span{font-size:13px;color:var(--mut)}
+.chips button{width:auto;padding:6px 10px;font-size:13px}
+.chips button.on{background:var(--acc);color:var(--bg)}
+.res.big{font-size:20px;margin:2px 0}
+.ghost{color:var(--mut);opacity:.55}
+.strow{display:grid;grid-template-columns:22px 1fr 1fr;gap:6px;align-items:center;margin-bottom:6px}
+.strow.bi{grid-template-columns:22px 1fr 1fr 1fr}
+.strow .ed.sm{min-height:40px;padding:4px 6px;font-size:18px}
+.strow .idx,.strow.sthead span{color:var(--mut);font-size:12px;text-align:center}
+.stt{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:3px 10px;font-size:15px;margin:4px 0}
+.stt .k{color:var(--mut)}
+.stt .s3{grid-column:2/-1}
+sub,sup{line-height:0}
+.chips.dim2{opacity:.4;pointer-events:none}
+.fld.dim{opacity:.4}
+.fld.dim .ed{pointer-events:none;background:transparent}
+.res sup,.res sub,.lb2 sub{font-size:.65em}
+.chips.alt button.on{background:var(--acc2);color:var(--bg)}
+:root{--acc2:#1f5fa6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--acc2:#7db4f0}}
+:root[data-theme="dark"]{--acc2:#7db4f0}
+.gt{font-size:13px;font-weight:600;margin:8px 0 4px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}
+.fgrid .fld:only-child{grid-column:1/-1}
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.memx{width:auto;padding:6px 8px;font-size:12px;background:none;color:var(--mut)}
+#memv{font-weight:600;color:var(--acc2)}
+.dd{position:relative}
+.deg{font-size:11px;font-weight:700;color:var(--mut);border:1px solid var(--bd);border-radius:6px;padding:2px 6px}
+:root{--shf:#c77700}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--shf:#f2b45c}}
+:root[data-theme="dark"]{--shf:#f2b45c}
+.selx{background:rgba(31,95,166,.35);border-radius:3px}
+.pa{display:inline-flex;align-items:center}
+.pr{align-self:stretch;width:.4em;flex:none;overflow:visible}
+.mx{display:inline-flex;align-items:center;gap:3px}
+.mixl{display:inline-flex;align-items:center;gap:2px}
+.fgrid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 8px}
+.tw{max-height:240px;overflow:auto;margin-top:6px}
+.tt{border-collapse:collapse;font-size:14px;width:100%}
+.tt th,.tt td{padding:2px 8px;text-align:right;border-bottom:1px solid var(--bd)}
+.tt th{color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--card)}
+.gr{width:100%;max-width:420px;display:block}
+.gr text{fill:var(--mut);font-size:10px}
+.gr .ax{stroke:var(--mut);stroke-width:1.1}
+.gr .gd{stroke:var(--bd);stroke-width:.7}
+.tri{width:100%;max-width:340px;display:block;margin:0 auto 6px}
+.tri text{font-size:12px;fill:var(--tx)}
+.tri .gv{fill:var(--acc);font-weight:700}
+.tri polygon{fill:none;stroke:var(--tx);stroke-width:1.8}
+.hwrap{margin-top:12px}
+.hhead{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mut);margin-bottom:4px}
+.hhead button{width:auto;padding:2px 8px;font-size:12px;background:none;color:var(--mut)}
+.hlist{max-height:230px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.hbox{border:1px solid var(--bd);border-radius:10px;padding:6px 10px;background:var(--bg);cursor:pointer;font-size:17px;outline:none}
+.hbox:hover,.hbox:focus{border-color:var(--acc2)}
+.hexp{color:var(--mut);overflow-x:auto}
+.hres{text-align:right;font-size:19px}
+.rbox{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.hbox.rline{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 10px;font-size:15px;border-style:dashed}
+.hbox.rline .hexp{flex:1;min-width:0}
+.hbox.rline .hres{font-size:17px;white-space:nowrap}
+</style></head><body>
+<div class="calc">
+<div class="main">
+<div class="bar"><div class="dd"><button class="modeb" id="mode"></button><div class="menu" id="menu" hidden></div></div><div class="dd"><button class="modeb" id="amode" title="Angle unit for sin, cos and tan">DEG ▾</button><div class="menu" id="amenu" hidden></div></div><div class="dd" id="memb" hidden><button class="modeb" id="memv" title="Memory: tap to insert M"></button><button class="memx" id="memx" title="Clear the memory">✕</button></div></div>
+<div id="calcp"><div class="ed" id="ed" aria-label="Expression"></div></div>
+<div id="geo" hidden></div>
+<div id="fin" hidden></div>
+<div id="fn" hidden></div>
+<div id="pat" hidden></div>
+<div id="stat" hidden></div>
+<div id="eq" hidden></div>
+<div id="tab" hidden></div>
+<div id="tri" hidden></div>
+<div class="out" id="out"><span class="dec">Enter an expression, press =</span></div>
+<p class="hint">Keyboard: f fraction, / divide, r root, ^ power, p π, arrows move, Enter =. Results are exact.</p>
+</div>
+<div class="side"><button class="kt" id="kt">⌨ Hide keypad</button><div class="grid" id="keys"></div></div>
+</div>
+<script>
+// ---------- exact arithmetic ----------
+// A Value is an object { radicand: Fraction } meaning sum of coef * sqrt(radicand); radicand "1" = rational part.
+const ab=a=>a<0n?-a:a;
+const gcd=(a,b)=>{a=ab(a);b=ab(b);while(b){[a,b]=[b,a%b]}return a};
+const F=(n,d=1n)=>{if(d===0n)throw Error("Division by zero");if(d<0n){n=-n;d=-d}const g=gcd(n,d)||1n;return{n:n/g,d:d/g}};
+const fadd=(a,b)=>F(a.n*b.d+b.n*a.d,a.d*b.d);
+const fmul=(a,b)=>F(a.n*b.n,a.d*b.d);
+const fz=a=>a.n===0n;
+function root(n){ // n = o^2 * i, i square-free
+  let o=1n,i=n;
+  for(let p=2n;p*p<=i&&p<1000000n;p++){while(i%(p*p)===0n){i/=p*p;o*=p}}
+  return[o,i];
+}
+function add(a,b,s=1n){
+  const r={...a};
+  for(const k in b){const c=fmul(b[k],F(s));r[k]=r[k]?fadd(r[k],c):c;if(fz(r[k]))delete r[k]}
+  return r;
+}
+// term keys: "k" = sqrt(k); "k@p" = sqrt(k)·π^p
+const APX=Symbol("apx");let APXF=false,lastAns=null,memory=null;
+let angleMode="deg";
+const kp=k=>{const a=k.split("@");return[BigInt(a[0]),a[1]?+a[1]:0,a[2]?+a[2]:0]};
+const mkk=(r,p,q)=>String(r)+((p||q)?"@"+(p||0)+(q?"@"+q:""):"");
+function mul(a,b){
+  let r={};
+  for(const ka in a)for(const kb in b){
+    const[ra,pa,qa]=kp(ka),[rb,pb,qb]=kp(kb);
+    const[o,i]=root(ra*rb);
+    r=add(r,{[mkk(i,pa+pb,qa+qb)]:fmul(fmul(a[ka],b[kb]),F(o))});
+  }
+  return r;
+}
+const keys=v=>Object.keys(v);
+const isRat=v=>keys(v).every(k=>k==="1");
+const ratOf=v=>v["1"]||F(0n);
+function div(a,b){
+  const ks=keys(b);
+  if(!ks.length)throw Error("Division by zero");
+  let inv;
+  if(ks.length===1){ // 1/(c√r π^p) = √r π^−p /(c·r)
+    const k=ks[0],c=b[k],[r,p,q]=kp(k);
+    inv={[mkk(r,-p,-q)]:F(c.d,c.n*r)};
+  }else if(ks.length===2&&ks.includes("1")&&ks.every(x=>!x.includes("@"))){ // conjugate: 1/(p+q√k)
+    const k=ks.find(x=>x!=="1"),p=b["1"],q=b[k];
+    const den=add({"1":fmul(p,p)},{"1":fmul(fmul(q,q),F(BigInt(k)))},-1n)["1"];
+    if(!den)throw Error("Division by zero");
+    inv={"1":fmul(p,F(den.d,den.n)),[k]:fmul(fmul(q,F(-1n)),F(den.d,den.n))};
+  }else throw Error("Can’t simplify this division exactly");
+  return mul(a,inv);
+}
+function sqrt(a){
+  if(!isRat(a))throw Error("Can’t simplify the root of a surd exactly");
+  const r=ratOf(a);
+  if(r.n<0n)throw Error("Square root of a negative number");
+  if(r.n===0n)return{};
+  const [o,i]=root(r.n*r.d);
+  return{[i]:F(o,r.d)};
+}
+function pow(a,e){
+  if(!isRat(e))throw Error("Exponent must be a number");
+  const r=ratOf(e);
+  if(r.d===2n&&r.n===1n)return sqrt(a);
+  if(r.d!==1n||ab(r.n)>200n)throw Error("Exponent must be a whole number");
+  let res={"1":F(1n)},n=ab(r.n);
+  for(let i=0n;i<n;i++)res=mul(res,a);
+  return r.n<0n?div({"1":F(1n)},res):res;
+}
+// ---------- functions for the calculator ----------
+const toNum=v=>keys(v).reduce((t,k)=>{const[r,p,q]=kp(k);return t+Number(v[k].n)/Number(v[k].d)*Math.sqrt(Number(r))*Math.PI**p*Math.E**q},0);
+const rat=(p,q=1n)=>{const f=F(BigInt(p),BigInt(q));return f.n===0n?{}:{"1":f}};
+function apx(x){
+  if(!isFinite(x))throw Error("Math error");
+  APXF=true;const q=Math.round(x*1e10);
+  return q===0?{}:{"1":F(BigInt(q),10000000000n)}}
+const PIV=()=>({"1@1":F(1n)}),EV=()=>({"1@0@1":F(1n)});
+function divE(a,b){try{return div(a,b)}catch(e){if(/zero/.test(e.message))throw e;return apx(toNum(a)/toNum(b))}}
+function sinBase(x){return x===0?{}:x===30?{"1":F(1n,2n)}:x===45?{"2":F(1n,2n)}:x===60?{"3":F(1n,2n)}:x===90?{"1":F(1n)}:null}
+function sinDeg(n){
+  let t=((n%360)+360)%360,sg=1;
+  if(t>=180){t-=180;sg=-1}
+  if(t>90)t=180-t;
+  const b=sinBase(t);
+  return b===null?null:(sg<0?add({},b,-1n):b)}
+function trigE(fn,v){
+  let dv=null; // the angle in degrees, when it can be found exactly
+  if(angleMode==="deg")dv=v;
+  else{const ks=keys(v);if(!ks.length)dv=v;else if(ks.length===1&&ks[0]==="1@1")dv={"1":fmul(v["1@1"],F(180n))}}
+  if(dv&&isRat(dv)&&ratOf(dv).d===1n&&ab(ratOf(dv).n)<100000000n){
+    const n=Number(ratOf(dv).n),s=sinDeg(n),c=sinDeg(n+90);
+    if(s!==null&&c!==null){
+      if(fn==="sin")return s;
+      if(fn==="cos")return c;
+      if(!keys(c).length)throw Error("Math error: tan is undefined");
+      return div(s,c)}}
+  const r=angleMode==="rad"?toNum(v):toNum(v)*Math.PI/180;
+  if(fn==="tan"&&Math.abs(Math.cos(r))<1e-12)throw Error("Math error: tan is undefined");
+  return apx(Math[fn](r))}
+function invTrigE(fn,v){
+  const x=toNum(v);
+  if(fn!=="atan"&&Math.abs(x)>1+1e-12)throw Error("Math error: the value must be between −1 and 1");
+  const d=Math[fn](fn==="atan"?x:Math.max(-1,Math.min(1,x)))*180/Math.PI,rd=Math.round(d),exact=Math.abs(d-rd)<1e-9;
+  if(angleMode==="rad")return exact?(rd===0?{}:{"1@1":F(BigInt(rd),180n)}):apx(d*Math.PI/180);
+  return exact?rat(rd):apx(d)}
+function lnE(v){
+  const x=toNum(v);
+  if(!(x>0))throw Error("Math error: ln of a non-positive number");
+  const ks=keys(v);
+  if(ks.length===1){
+    const[r,p,q]=kp(ks[0]),c=v[ks[0]];
+    if(r===1n&&p===0&&c.n===1n&&c.d===1n)return q===0?{}:rat(q)} // ln 1 = 0, ln e^q = q
+  return apx(Math.log(x))}
+function combE(o,nv,rv){
+  const n=ratOf(nv),r=ratOf(rv);
+  if(!isRat(nv)||!isRat(rv)||n.d!==1n||r.d!==1n||n.n<0n||r.n<0n||r.n>n.n||n.n>1000n)throw Error("Math error: n and r must be whole numbers with 0 ≤ r ≤ n");
+  let p=1n;for(let i=0n;i<r.n;i++)p*=n.n-i;
+  if(o==="nPr")return rat(p);
+  let f=1n;for(let i=2n;i<=r.n;i++)f*=i;
+  return rat(p/f)}
+function logE(bv,xv){
+  const b=toNum(bv),x=toNum(xv);
+  if(!(b>0&&b!==1))throw Error("Math error: the base must be positive and not 1");
+  if(!(x>0))throw Error("Math error: log of a non-positive number");
+  const L=Math.log(x)/Math.log(b);
+  for(let q=1;q<=6;q++){const p=Math.round(L*q);if(Math.abs(L*q-p)<1e-9)return rat(p,q)}
+  return apx(L)}
+function factE(v){
+  const r=ratOf(v);
+  if(!isRat(v)||r.d!==1n||r.n<0n||r.n>69n)throw Error("Math error: n! needs a whole number from 0 to 69");
+  let p=1n;for(let i=2n;i<=r.n;i++)p*=i;return rat(p)}
+function iroot(b,n){
+  const c=BigInt(Math.round(Math.pow(Number(b),1/n)));
+  for(let d=-1n;d<=1n;d++){const t=c+d;if(t>=0n&&t**BigInt(n)===b)return t}
+  return null}
+function nrootE(nv,xv){
+  const n=toNum(nv),x=toNum(xv);
+  if(!(Number.isInteger(n)&&n>=2&&n<=100))throw Error("The root index must be a whole number from 2 to 100");
+  if(x<0&&n%2===0)throw Error("Math error: even root of a negative number");
+  if(n===2){try{return sqrt(xv)}catch(e){return apx(Math.sqrt(x))}}
+  if(isRat(xv)){
+    const r=ratOf(xv),neg=r.n<0n,pn=iroot(ab(r.n),n),pd=iroot(r.d,n);
+    if(pn!==null&&pd!==null)return rat(neg?-pn:pn,pd)}
+  return apx(x<0?-Math.pow(-x,1/n):Math.pow(x,1/n))}
+const sqrtE=x=>nrootE(rat(2),x);
+function powG(a,e){
+  if(isRat(e)){
+    const r=ratOf(e);
+    if(r.d===1n&&ab(r.n)<=200n)return pow(a,e);
+    if(r.d<=20n&&ab(r.n)<=200n){
+      const base=r.n>=0n?pow(a,rat(r.n)):divE(rat(1),pow(a,rat(-r.n)));
+      return nrootE(rat(r.d),base)}}
+  const x=toNum(a),y=toNum(e);
+  if((x<0&&!Number.isInteger(y))||(x===0&&y<=0))throw Error("Math error");
+  return apx(Math.pow(x,y))}
+// ---------- parser ----------
+let FACT=null;
+function tokenize(s){
+  const t=[],re=/\s*(\d+(?:[.,]\d+)?|asin|acos|atan|sin|cos|tan|sqrt|root|logb|log|mixed|factor|nCr|nPr|abs|ln|Ans|M|pi|√|x|y|e|[-+*/×÷^()−!;%=])/gy;
+  let m,last=0;
+  while((m=re.exec(s))){t.push(m[1]);last=re.lastIndex}
+  if(s.slice(last).trim())throw Error("Unexpected “"+s.slice(last).trim()[0]+"”");
+  return t;
+}
+function evaluate(s){
+  APXF=false;FACT=null;
+  const t=tokenize(s);let p=0;
+  const peek=()=>t[p],next=()=>t[p++];
+  const num=x=>{const[i,f=""]=x.replace(",",".").split(".");const q=F(BigInt(i+f),10n**BigInt(f.length));return q.n===0n?{}:{"1":q}};
+  const FUN1=["sin","cos","tan","asin","acos","atan"];
+  const START=["(","sqrt","√","root","logb","log","pi","e","abs","ln","M","Ans","mixed","factor","x","y",...FUN1];
+  const startsAtom=x=>x!==undefined&&(/^\d/.test(x)||START.includes(x));
+  const closeP=()=>{if(peek()===")")next();else if(p<t.length)throw Error("Missing )")};
+  const open=(w)=>{if(next()!=="(")throw Error("Missing ( after "+w)};
+  const semi=()=>{if(next()!==";")throw Error("Missing separator")};
+  function expr(){
+    let v=term();
+    while(peek()==="+"||peek()==="-"||peek()==="−"){const o=next();const r=term();v=add(v,r,o==="+"?1n:-1n)}
+    return v;
+  }
+  function term(){
+    let v=unary();
+    for(;;){
+      const x=peek();
+      if(x==="*"||x==="×"){next();v=mul(v,unary())}
+      else if(x==="/"||x==="÷"){next();v=divE(v,unary())}
+      else if(startsAtom(x)){v=mul(v,unary())} // implicit multiplication: 2√3, 3(4+1), 2π
+      else return v;
+    }
+  }
+  function unary(){
+    if(peek()==="-"||peek()==="−"){next();return add({},unary(),-1n)}
+    if(peek()==="+"){next();return unary()}
+    return comb();
+  }
+  function comb(){
+    let b=power();
+    while(peek()==="nCr"||peek()==="nPr"){const o=next();b=combE(o,b,power())}
+    return b;
+  }
+  function power(){
+    let b=atom();
+    while(peek()==="!"||peek()==="%"){const o=next();b=o==="!"?factE(b):divE(b,rat(100))}
+    if(peek()==="^"){next();return powG(b,unary())}
+    return b;
+  }
+  function atom(){
+    const x=next();
+    if(x===undefined)throw Error("Expression ended early");
+    if(/^\d/.test(x))return num(x);
+    if(x==="("){const v=expr();closeP();return v}
+    if(x==="sqrt"||x==="√")return sqrtE(atom());
+    if(x==="pi")return PIV();
+    if(x==="e")return EV();
+    if(x==="abs"){open(x);const v=expr();closeP();return toNum(v)<0?add({},v,-1n):v}
+    if(x==="ln"){open(x);const v=expr();closeP();return lnE(v)}
+    if(x==="log"){open(x);const v=expr();closeP();return logE(rat(10),v)}
+    if(x==="M"){if(!memory)throw Error("The memory is empty (use Shift + Ans to store a value)");if(memory[APX])APXF=true;return{...memory}}
+    if(x==="x"||x==="y")throw Error("x and y can only be used in the Equation solver and Table sections");
+    if(x==="Ans"){if(!lastAns)throw Error("No previous answer");if(lastAns[APX])APXF=true;return{...lastAns}}
+    if(FUN1.includes(x)){
+      open(x);const v=expr();closeP();
+      return x[0]==="a"?invTrigE(x,v):trigE(x,v)}
+    if(x==="root"||x==="logb"){
+      open(x);const a1=expr();semi();const a2=expr();closeP();
+      return x==="root"?nrootE(a1,a2):logE(a1,a2)}
+    if(x==="mixed"){
+      open(x);const w=expr();semi();const n=expr();semi();const d=expr();closeP();
+      const f=divE(n,d);return toNum(w)<0?add(w,f,-1n):add(w,f)}
+    if(x==="factor"){open(x);const v=expr();closeP();FACT={v};return v}
+    throw Error("Unexpected “"+x+"”");
+  }
+  const v=expr();
+  if(p<t.length)throw Error("Unexpected “"+t[p]+"”");
+  if(APXF)v[APX]=true;
+  return v;
+}
+// ---------- display ----------
+const fr=(n,d)=>d===1n?`${n}`:`<span class="fr"><span>${n}</span><span>${d}</span></span>`;
+const RAD='<svg class="rd" viewBox="0 0 10 20" preserveAspectRatio="none"><path d="M0 12 L2 10.5 L5 19 L10 0" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>';
+function show(v){
+  if(v[APX]||keys(v).some(k=>v[k].d>100000000n))return cm(String(+toNum(v).toPrecision(10)));
+  const ks=keys(v).sort((a,b)=>{const[ra,pa,qa]=kp(a),[rb,pb,qb]=kp(b);return pa-pb||qa-qb||(ra<rb?-1:ra>rb?1:0)});
+  if(!ks.length)return"0";
+  let html="",first=true;
+  for(const k of ks){
+    const c=v[k],neg=c.n<0n,n=ab(c.n),[r,p,q]=kp(k);
+    const sym=(p===0?"":p===1?"π":`π<sup>${p}</sup>`)+(q===0?"":q===1?"e":`e<sup>${q}</sup>`)+(r===1n?"":`<span class="sx">${RAD}<span class="sq">${r}</span></span>`);
+    const body=sym?`${n===1n?"":n}${sym}`:`${n}`;
+    const term=c.d===1n?body:fr(body,c.d);
+    html+=first?(neg?"−":""):(neg?" − ":" + ");
+    html+=term;first=false;
+  }
+  return html;
+}
+// ---------- natural-display editor ----------
+const mkSeq=p=>({items:[],parent:p||null});
+let root0=mkSeq();let cur={seq:root0,i:0};
+const NK={frac:2,log:2,nroot:2,mixed:3};
+const nk=n=>NK[n.t]||1;
+const kids=n=>[n.a,n.b,n.c].slice(0,nk(n));
+const isN=x=>typeof x==="object";
+function mk(t,extra){const n={t,...extra};n.a=mkSeq(n);if(nk(n)>1)n.b=mkSeq(n);if(nk(n)>2)n.c=mkSeq(n);return n}
+function ins(x){cur.seq.items.splice(cur.i,0,x);if(isN(x))x.host=cur.seq;cur.i++}
+function insNode(t,pre,extra){
+  const n=mk(t,extra),q=cur.seq,it=q.items;let moved=[];
+  if(t==="frac"){let j=cur.i;while(j>0&&typeof it[j-1]==="string"&&/^[\d.]$/.test(it[j-1]))j--;moved=it.splice(j,cur.i-j);n.a.items=moved;cur.i=j}
+  it.splice(cur.i,0,n);n.host=q;
+  if(pre){n.a.items=[...pre]}
+  cur={seq:(t==="frac"&&moved.length)?n.b:n.a,i:0};
+  if(pre)cur={seq:q,i:q.items.indexOf(n)+1}; // a complete exponent such as x²: carry on after it
+}
+function right(){const{seq,i}=cur,it=seq.items[i];
+  if(it&&isN(it)){cur={seq:it.a,i:0};return}
+  if(i<seq.items.length){cur.i++;return}
+  const p=seq.parent;if(!p){navField(1,1,true);return}
+  const ks=kids(p),j=ks.indexOf(seq);
+  if(j<ks.length-1){cur={seq:ks[j+1],i:0};return}
+  cur={seq:p.host,i:p.host.items.indexOf(p)+1}}
+function left(){const{seq,i}=cur,it=seq.items[i-1];
+  if(it&&isN(it)){const ks=kids(it),s=ks[ks.length-1];cur={seq:s,i:s.items.length};return}
+  if(i>0){cur.i--;return}
+  const p=seq.parent;if(!p){navField(-1,1,true);return}
+  const ks=kids(p),j=ks.indexOf(seq);
+  if(j>0){cur={seq:ks[j-1],i:ks[j-1].items.length};return}
+  cur={seq:p.host,i:p.host.items.indexOf(p)}}
+function vert(down){const p=cur.seq.parent;
+  if(p&&(p.t==="frac"||p.t==="mixed")){
+    const ks=kids(p),j=ks.indexOf(cur.seq),lo=p.t==="mixed"?1:0;
+    if(down&&j>=lo&&j<ks.length-1){cur={seq:ks[j+1],i:0};return}
+    if(!down&&j>lo){cur={seq:ks[j-1],i:ks[j-1].items.length};return}}
+  navField(down?1:-1,mode==="geo"?2:mode==="stat"?(smode==="bi"?3:2):mode==="tri"?3:1)}
+function closeParen(){
+  let s=cur.seq;
+  while(s&&s.parent){const p=s.parent;if(p.t==="par"){cur={seq:p.host,i:p.host.items.indexOf(p)+1};return}s=p.host}}
+function navField(d,step,horiz){
+  const L=grp(),k=L.indexOf(A),t=L[k+d*step];
+  if(!t||k<0)return;
+  t.cur={seq:t.root,i:(horiz&&d>0)?0:t.root.items.length};
+  t.host.focus({preventScroll:true})}
+function back(){const{seq,i}=cur;
+  if(i>0){const it=seq.items[i-1];
+    if(!isN(it)||kids(it).every(s=>!s.items.length)){seq.items.splice(i-1,1);cur.i--}else left();return}
+  const p=seq.parent;
+  if(p&&kids(p).every(s=>!s.items.length)){const h=p.host,k=h.items.indexOf(p);h.items.splice(k,1);cur={seq:h,i:k}}else left()}
+const SERMAP={"sin⁻¹(":"asin(","cos⁻¹(":"acos(","tan⁻¹(":"atan(","π":"pi","C":"nCr","P":"nPr"};
+function serItems(items){return items.map(it=>{
+  if(!isN(it))return SERMAP[it]||it;
+  if(kids(it).some(s=>!s.items.length))throw Error("Fill in the empty box");
+  const k=kids(it).map(ser);
+  switch(it.t){
+    case"frac":return`((${k[0]})/(${k[1]}))`;
+    case"mixed":return`mixed(${k[0]};${k[1]};${k[2]})`;
+    case"log":return`logb(${k[0]};${k[1]})`;
+    case"nroot":return`root(${k[0]};${k[1]})`;
+    case"sqrt":return`sqrt(${k[0]})`;
+    case"par":return`${it.fn}(${k[0]})`;
+    default:return`^(${k[0]})`}}).join("")}
+function ser(seq){return serItems(seq.items)}
+// ---------- rendering ----------
+const el=(c,t)=>{const e=document.createElement("span");e.className=c;if(t)e.textContent=t;return e};
+function R(seq){
+  const e=el("sq"+(seq.items.length||seq.ph?"":" ph")),here=cur.seq===seq;
+  e._seq=seq;seq._el=e;
+  const so=sel&&A&&sel.E===A&&sel.seq===seq;
+  seq.items.forEach((it,k)=>{
+    if(here&&cur.i===k)e.appendChild(el("caret"));
+    const ie=N(it);ie._seq=seq;ie._k=k;
+    if(so&&k>=sel.from&&k<sel.to)ie.classList.add("selx");
+    e.appendChild(ie)});
+  if(here&&cur.i===seq.items.length)e.appendChild(el("caret"));
+  if(!seq.items.length&&seq.ph)e.appendChild(el("ghost",seq.ph));
+  return e}
+function parenSvg(left){const s=document.createElementNS("http://www.w3.org/2000/svg","svg");s.setAttribute("viewBox","0 0 6 20");s.setAttribute("preserveAspectRatio","none");s.setAttribute("class","pr");const p=document.createElementNS("http://www.w3.org/2000/svg","path");p.setAttribute("d",left?"M5 0 Q0 10 5 20":"M1 0 Q6 10 1 20");p.setAttribute("fill","none");p.setAttribute("stroke","currentColor");p.setAttribute("stroke-width","1.5");p.setAttribute("vector-effect","non-scaling-stroke");s.appendChild(p);return s}
+function rad(){const s=document.createElementNS("http://www.w3.org/2000/svg","svg");s.setAttribute("viewBox","0 0 10 20");s.setAttribute("preserveAspectRatio","none");s.setAttribute("class","rd");const p=document.createElementNS("http://www.w3.org/2000/svg","path");p.setAttribute("d","M0 12 L2 10.5 L5 19 L10 0");p.setAttribute("fill","none");p.setAttribute("stroke","currentColor");p.setAttribute("stroke-width","1.5");p.setAttribute("vector-effect","non-scaling-stroke");s.appendChild(p);return s}
+function N(it){
+  if(!isN(it))return el("",it==="*"?"×":it==="-"?"−":it==="/"?"÷":it);
+  if(it.t==="frac"){const f=el("ef");f.append(R(it.a),R(it.b));return f}
+  if(it.t==="sqrt"){const f=el("sx");f.append(rad(),R(it.a));return f}
+  if(it.t==="par"){const f=el("pa");if(it.lab)f.append(el("",it.lab));f.append(parenSvg(true),R(it.a),parenSvg(false));return f}
+  if(it.t==="mixed"){const f=el("mx"),q=el("ef");q.append(R(it.b),R(it.c));f.append(R(it.a),q);return f}
+  if(it.t==="nroot"){const f=el("nr"),ni=el("ni"),sx=el("sx");ni.appendChild(R(it.a));sx.append(rad(),R(it.b));f.append(ni,sx);return f}
+  if(it.t==="log"){const f=el("lg"),ls=el("ls");ls.appendChild(R(it.a));f.append(el("","log"),ls,el("","("),R(it.b),el("",")"));return f}
+  const p=el("pw");p.appendChild(R(it.a));return p}
+const out=document.getElementById("out");
+// ---------- editor instances ----------
+let A=null,mode="calc",sel=null;
+const editors=[];
+function posInSeq(seq,x){
+  const e=seq._el;if(!e)return{seq,i:seq.items.length};
+  for(const c of e.children){if(typeof c._k!=="number")continue;const r=c.getBoundingClientRect();if(x<r.left+r.width/2)return{seq,i:c._k}}
+  return{seq,i:seq.items.length}}
+function posAt(e,E,cs){
+  let t=document.elementFromPoint(e.clientX,e.clientY);
+  while(t&&t!==E.host){
+    if(typeof t._k==="number"&&(!cs||t._seq===cs)){const r=t.getBoundingClientRect();return{seq:t._seq,i:t._k+(e.clientX>r.left+r.width/2?1:0)}}
+    if(typeof t._k!=="number"&&t._seq&&(!cs||t._seq===cs))return posInSeq(t._seq,e.clientX);
+    t=t.parentElement}
+  return posInSeq(cs||E.root,e.clientX)}
+function Ed(host){
+  const E={root:mkSeq(),host};E.cur={seq:E.root,i:0};
+  host.tabIndex=0;editors.push(E);
+  host.addEventListener("focus",()=>activate(E));
+  let drag=null;
+  host.addEventListener("pointerdown",e=>{
+    if(e.button>0)return;
+    activate(E);
+    const pos=posAt(e,E,null);
+    cur=pos;E.cur=pos;sel=null;
+    drag=e.pointerType==="mouse"?{seq:pos.seq,i:pos.i}:null;
+    if(drag&&host.setPointerCapture)host.setPointerCapture(e.pointerId);
+    redraw();host.focus({preventScroll:true});e.preventDefault()});
+  host.addEventListener("pointermove",e=>{
+    if(!drag)return;
+    const pos=posAt(e,E,drag.seq);
+    sel=drag.i===pos.i?null:{E,seq:drag.seq,from:Math.min(drag.i,pos.i),to:Math.max(drag.i,pos.i)};
+    cur={seq:drag.seq,i:pos.i};E.cur=cur;redraw()});
+  const end=()=>{drag=null};
+  host.addEventListener("pointerup",end);host.addEventListener("pointercancel",end);
+  host.addEventListener("dblclick",()=>{
+    activate(E);sel={E,seq:E.root,from:0,to:E.root.items.length};
+    cur={seq:E.root,i:E.root.items.length};E.cur=cur;redraw()});
+  host.addEventListener("keydown",e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="a"){
+      e.preventDefault();sel={E,seq:E.root,from:0,to:E.root.items.length};cur={seq:E.root,i:E.root.items.length};E.cur=cur;redraw();return}
+    if(e.ctrlKey||e.metaKey||e.altKey)return;
+    const m={ArrowLeft:"◀",ArrowRight:"▶",ArrowUp:"▲",ArrowDown:"▼",Backspace:"⌫",Delete:"⌫",Enter:"enter","=":"=","/":"÷","^":"pow",f:"a/b",p:"π",r:"√",x:"x",y:"y",e:"e","*":"×","-":"−","(":"(",")":")","%":"%"};
+    let a=m[e.key];if(!a&&/^[\d.+]$/.test(e.key))a=e.key;
+    if(a){e.preventDefault();press(a)}});
+  return E}
+function activate(E){
+  if(A===E)return;
+  sel=null;
+  if(A)A.cur=cur;
+  A=E;root0=E.root;cur=E.cur;redraw();
+  if(matchMedia("(max-width:720px),(hover:none) and (pointer:coarse)").matches)E.host.scrollIntoView({block:"nearest"})}
+const redraw=()=>editors.forEach(E=>E.host.replaceChildren(R(E.root)));
+const mainE=Ed(document.getElementById("ed"));
+const row=(l,h,v)=>`<div class="res"><span class="lb">${l}</span>${h}${v!==undefined?`<span class="dec">≈ ${d2(v)}</span>`:""}</div>`;
+// ---------- finance mode: choose a formula, leave one value empty ----------
+const finEl=document.getElementById("fin");
+const finDefs=[["P","Principal P (R)"],["A","Final amount A (R)"],["x","Payment x per period (R)"],["F","Future value Fv (R)"],["V","Present value Pv (R)"],["B","Outstanding balance OB (R)"],["i","Interest rate i (%); divided by m when m is given"],["n","Number of periods n"],["m","Periods per year m (optional)"]];
+const FORMS={simple:["P","A","i","n"],comp:["P","A","i","n"],fv:["x","F","i","n"],pv:["x","V","i","n"],bal:["P","x","i","n","B"]};
+let form="comp",mOff=true;
+const finE={},finRow={};
+const FRc=(a,b)=>`<span class="fr"><span>${a}</span><span>${b}</span></span>`;
+const FORMULA={
+  simple:'A = P(1 + in)',
+  comp:'A = P(1 + i)<sup>n</sup>',
+  fv:`Fv = x[${FRc("(1 + i)<sup>n</sup> − 1","i")}]`,
+  pv:`Pv = x[${FRc("1 − (1 + i)<sup>−n</sup>","i")}]`,
+  bal:`OB = A − Fv = P(1 + i)<sup>n</sup> − x[${FRc("(1 + i)<sup>n</sup> − 1","i")}]`};
+const NOTE={simple:"Simple interest: fill in three of P, A, i, n. i is the rate in % (e.g. 8 for 8 %) and n the number of periods. m is not used.",comp:"Fill in three of P, A, i, n.",fv:"Payments at the end of each period. Fill in three of x, Fv, i, n.",pv:"Payments at the end of each period. Fill in three of x, Pv, i, n.",bal:"Outstanding balance after n payments: OB = A − Fv. A = P(1 + i)ⁿ is the loan with interest, and Fv is the future value of the n payments made. Fill in all but one of P, x, i, n, OB."};
+function chips(label,items,onPick){
+  const c=document.createElement("div");c.className="chips";
+  const l=document.createElement("span");l.textContent=label;c.appendChild(l);
+  items.forEach(([t,v])=>{const b=document.createElement("button");b.textContent=t;b.dataset.v=v;
+    b.onmousedown=e=>e.preventDefault();b.onclick=()=>onPick(v,c);c.appendChild(b)});
+  return c}
+const mark=(c,v)=>[...c.querySelectorAll("button")].forEach(b=>b.classList.toggle("on",b.dataset.v===String(v)));
+const mEff=()=>mOff||form==="simple";
+function syncM(){const b=mEff(),h=finE.m.host;h.tabIndex=b?-1:0;h.parentNode.classList.toggle("dim",b)}
+function setMOff(b){mOff=b;syncM()}
+const finList=()=>FORMS[form].concat(mEff()?[]:["m"]).map(k=>finE[k]);
+const fHint=document.createElement("div");
+function applyForm(){
+  finRow.n.firstChild.textContent=form==="bal"?"Payments made so far, n":"Number of periods n";
+  syncM();mChips.classList.toggle("dim2",form==="simple");
+  finDefs.forEach(([k])=>{if(k!=="m")finRow[k].hidden=!FORMS[form].includes(k)});
+  fHint.innerHTML=`<div class="res">${FORMULA[form]}</div><div class="dec" style="font-size:13px;margin:4px 0 10px">${NOTE[form]}</div>`}
+const formChips=chips("Formula:",[["Simple interest","simple"],["Compound interest","comp"],["Future value","fv"],["Present value","pv"],["Outstanding balance","bal"]],v=>{
+  form=v;mark(formChips,v);applyForm();out.innerHTML="";
+  if(!finList().includes(A))finList()[0].host.focus({preventScroll:true});refresh()});
+finEl.append(formChips,fHint);
+finDefs.forEach(([k,l])=>{
+  const r=document.createElement("div");r.className="fld";
+  const lb=document.createElement("div");lb.className="lb2";lb.textContent=l;
+  const d=document.createElement("div");d.className="ed sm";
+  finE[k]=Ed(d);r.append(lb,d);finRow[k]=r;finEl.appendChild(r)});
+const mChips=chips("m:",[["None",""],["Yearly",1],["Half-yearly",2],["Quarterly",4],["Monthly",12],["Daily",365]],(v,c)=>{
+  const none=v==="";setMOff(none);
+  finE.m.root.items=String(v).split("");finE.m.cur={seq:finE.m.root,i:finE.m.root.items.length};
+  mark(c,v);if(none&&A===finE.m)finList()[0].host.focus({preventScroll:true});refresh()});
+finEl.appendChild(mChips);mChips.classList.add("alt");mark(mChips,"");mark(formChips,"comp");setMOff(true);applyForm();
+const cm=s=>String(s).replace(".",",");
+const f2=x=>{const[a,b]=Math.abs(x).toFixed(2).split(".");return(x<0?"−":"")+a.replace(/\B(?=(\d{3})+(?!\d))/g,"\u00a0")+","+b};
+const fg=x=>cm(+x.toPrecision(8));
+const sub=h=>`<div class="res dec">${h}</div>`;
+const MONEY=new Set(["P","A","x","F","V","B"]);
+const SYM={P:"P",A:"A",x:"x",F:"Fv",V:"Pv",B:"OB",i:"i",n:"n"};
+const fvF=(i,n)=>Math.abs(i)<1e-12?n:(Math.pow(1+i,n)-1)/i;
+const pvF=(i,n)=>Math.abs(i)<1e-12?n:(1-Math.pow(1+i,-n))/i;
+function bisect(f,lo=-0.99,hi=100){
+  let fl=f(lo);const fh=f(hi);
+  if(!(fl*fh<=0))throw Error("No solution for i with these values");
+  for(let k=0;k<200;k++){const mid=(lo+hi)/2,fm=f(mid);if(fl*fm<=0)hi=mid;else{lo=mid;fl=fm}}
+  return(lo+hi)/2}
+const chk=v=>{if(!(v.A/v.P>0))throw Error("A and P must have the same sign")};
+const SOLVE={
+  simple:{
+    A:v=>v.P*(1+v.i*v.n),P:v=>v.A/(1+v.i*v.n),
+    i:v=>{chk(v);if(v.n===0)throw Error("n must not be 0");return(v.A/v.P-1)/v.n},
+    n:v=>{chk(v);if(v.i===0)throw Error("i must not be 0");return(v.A/v.P-1)/v.i}},
+  comp:{
+    A:v=>v.P*Math.pow(1+v.i,v.n),
+    P:v=>v.A/Math.pow(1+v.i,v.n),
+    i:v=>{chk(v);if(v.n===0)throw Error("n must not be 0");return Math.pow(v.A/v.P,1/v.n)-1},
+    n:v=>{chk(v);if(!(1+v.i>0)||v.i===0)throw Error("i must be non-zero and greater than −1");return Math.log(v.A/v.P)/Math.log(1+v.i)}},
+  fv:{
+    F:v=>v.x*fvF(v.i,v.n),x:v=>v.F/fvF(v.i,v.n),
+    n:v=>{const q=1+v.F*v.i/v.x;if(!(q>0&&1+v.i>0))throw Error("No solution for n");return Math.abs(v.i)<1e-12?v.F/v.x:Math.log(q)/Math.log(1+v.i)},
+    i:v=>bisect(i=>v.x*fvF(i,v.n)-v.F)},
+  pv:{
+    V:v=>v.x*pvF(v.i,v.n),x:v=>v.V/pvF(v.i,v.n),
+    n:v=>{const q=1-v.V*v.i/v.x;if(!(q>0&&1+v.i>0))throw Error("No solution for n");return Math.abs(v.i)<1e-12?v.V/v.x:-Math.log(q)/Math.log(1+v.i)},
+    i:v=>bisect(i=>v.x*pvF(i,v.n)-v.V)},
+  bal:{
+    B:v=>v.P*Math.pow(1+v.i,v.n)-v.x*fvF(v.i,v.n),
+    x:v=>(v.P*Math.pow(1+v.i,v.n)-v.B)/fvF(v.i,v.n),
+    P:v=>(v.B+v.x*fvF(v.i,v.n))/Math.pow(1+v.i,v.n),
+    n:v=>{try{return bisect(n=>v.P*Math.pow(1+v.i,n)-v.x*fvF(v.i,n)-v.B,0,2000)}catch(e){throw Error("No solution for n with these values")}},
+    i:v=>{try{return bisect(i=>v.P*Math.pow(1+i,v.n)-v.x*fvF(i,v.n)-v.B)}catch(e){throw Error("No solution for i with these values")}}}};
+const TPL={
+  simple:v=>`${v.A} = ${v.P}(1 + ${v.i} × ${v.n})`,
+  comp:v=>`${v.A} = ${v.P}(1 + ${v.i})<sup>${v.n}</sup>`,
+  fv:v=>`${v.F} = ${v.x}[${FRc(`(1 + ${v.i})<sup>${v.n}</sup> − 1`,v.i)}]`,
+  pv:v=>`${v.V} = ${v.x}[${FRc(`1 − (1 + ${v.i})<sup>−${v.n}</sup>`,v.i)}]`,
+  bal:v=>`${v.B} = ${v.P}(1 + ${v.i})<sup>${v.n}</sup> − ${v.x}[${FRc(`(1 + ${v.i})<sup>${v.n}</sup> − 1`,v.i)}]`};
+function finCalc(){
+  const vars=FORMS[form],empty=vars.filter(k=>!finE[k].root.items.length);
+  if(empty.length!==1){out.innerHTML=`<span class="dec">${empty.length?"Fill in three of "+vars.map(k=>SYM[k]).join(", "):"Leave one value empty to solve for it"}</span>`;return}
+  try{
+    const g=k=>toNum(evaluate(ser(finE[k].root)));
+    const u=empty[0],vals={},txt={};
+    const m=(!mEff()&&finE.m.root.items.length)?g("m"):null;
+    if(m!==null&&!(m>0))throw Error("m must be positive");
+    const mm=m===null?1:m;
+    vars.forEach(k=>{if(k!==u){vals[k]=g(k)/(k==="i"?100*mm:1);txt[k]=fg(vals[k])}});
+    txt[u]=SYM[u];
+    const res=SOLVE[form][u](vals);
+    if(!isFinite(res))throw Error("Check your values");
+    let h=u!=="i"?row("i =",`${fg(g("i"))}${m!==null?` ÷ 100 ÷ ${fg(m)}`:" ÷ 100"} = ${fg(vals.i)}`):"";
+    h+=sub(TPL[form](txt));
+    h+=`<div class="res big"><span class="lb">${SYM[u]} =</span>${MONEY.has(u)?"R "+f2(res):u==="i"?fg(res*100*mm)+" %":fg(res)}</div>`;
+    if(u==="i"){h+=row("",m!==null?`i ÷ m = ${fg(res*100)} % per period (${fg(res)} as a decimal)`:`i = ${fg(res)} as a decimal`);
+      if(form!=="comp"&&form!=="simple")h+=sub("(solved numerically)")}
+    if(form==="bal"&&u==="B"){const A_=vals.P*Math.pow(1+vals.i,vals.n),F_=vals.x*fvF(vals.i,vals.n);h+=row("A =",`R ${f2(A_)}`)+row("Fv =",`R ${f2(F_)}`)}
+    if(form==="bal"&&(u==="n"||u==="i"))h+=sub("(solved numerically)");
+    if(u==="n"&&m!==null)h+=row("t =",`n ÷ m = ${cm(+(res/m).toFixed(2))} years`);
+    if((form==="comp"||form==="simple")&&u==="A")h+=row("Interest =",`R ${f2(res-vals.P)}`);
+    out.innerHTML=h}
+  catch(e){out.innerHTML=`<span class="dec">${e.message}</span>`}}
+// ---------- functions mode ----------
+const fnEl=document.getElementById("fn"),fnE={},fnRow={};
+const FKEYS={quad:["a","b","c"],hyp:["a","p","q"],exp:["a","b","p","q"],cub:["a","b","c","d"]};
+const FLBL={
+  quad:{a:"Coefficient a",b:"Coefficient b",c:"Coefficient c"},
+  hyp:{a:"a",p:"p (vertical asymptote x = p)",q:"q (horizontal asymptote y = q)"},
+  exp:{a:"a",b:"b (base; b &gt; 0 and b ≠ 1)",p:"p",q:"q (horizontal asymptote y = q)"},
+  cub:{a:"Coefficient a",b:"Coefficient b",c:"Coefficient c",d:"Constant d"}};
+const FFORM={quad:"y = ax<sup>2</sup> + bx + c",hyp:`y = ${FRc("a","x − p")} + q`,exp:"y = a·b<sup>x + p</sup> + q",cub:"y = ax<sup>3</sup> + bx<sup>2</sup> + cx + d"};
+let fname="quad";
+const fnList=()=>FKEYS[fname].map(k=>fnE[k]);
+const grp=()=>mode==="geo"?gList():mode==="fin"?finList():mode==="fn"?fnList():mode==="pat"?patList():mode==="stat"?statList():mode==="eq"?eqList():mode==="tab"?tabList():mode==="tri"?triList():[mainE];
+const d2=x=>String(+x.toFixed(2)).replace(".",",").replace("-","−");
+const neg=v=>add({},v,-1n),dif=(x,y)=>add(x,y,-1n),three={"1":F(3n)};
+const ORX='<span class="lb" style="margin:0 10px">or</span>';
+const QX=(f,n)=>{try{const v=f();return{h:show(v),n:toNum(v)}}catch(e){return{h:d2(n),n,approx:true}}};
+const pt=(x,y)=>`(&nbsp;${x.h}&nbsp;;&nbsp;${y.h}&nbsp;)`;
+const lineEq=(sx,cv)=>!keys(cv).length?`y = ${sx}`:toNum(cv)<0?`y = ${sx} − ${show(neg(cv))}`:`y = ${sx} + ${show(cv)}`;
+// exact roots of ax² + bx + c for rational Values (sorted, no duplicates)
+function qsolve(a,b,c){
+  const D=add(mul(b,b),mul({"1":F(4n)},mul(a,c)),-1n);
+  if(toNum(D)<0)return[];
+  const s=sqrt(D),twoA=mul({"1":F(2n)},a),nb=neg(b);
+  const r=[div(add(nb,s),twoA),div(add(nb,s,-1n),twoA)].sort((p,q)=>toNum(p)-toNum(q));
+  return Math.abs(toNum(r[0])-toNum(r[1]))<1e-12?[r[0]]:r}
+function ratInts(vs){
+  const fr=vs.map(ratOf);let L=1n;fr.forEach(f=>{L=L/gcd(L,f.d)*f.d});
+  const ints=fr.map(f=>f.n*(L/f.d));
+  return ints.some(x=>ab(x)>10000n)?null:ints.map(Number)}
+function divisors(n){n=Math.abs(n);const r=[];for(let i=1;i*i<=n;i++)if(n%i===0){r.push(i);if(i*i!==n)r.push(n/i)}return r}
+function findRatRoot(A_,B_,C_,D_){
+  if(D_===0)return[0,1];
+  for(const q of divisors(A_))for(const p of divisors(D_))for(const sg_ of[1,-1]){
+    const P=sg_*p;if(A_*P**3+B_*P*P*q+C_*P*q*q+D_*q**3===0)return[P,q]}
+  return null}
+function numRoots(na,nb,nc,nd){
+  const f=x=>((na*x+nb)*x+nc)*x+nd,disc=nb*nb-3*na*nc;
+  const B=1+Math.max(Math.abs(nb/na),Math.abs(nc/na),Math.abs(nd/na));
+  const cps=disc>0?[(-nb-Math.sqrt(disc))/(3*na),(-nb+Math.sqrt(disc))/(3*na)].sort((x,y)=>x-y):[];
+  const edges=[-B,...cps,B],r=[];
+  cps.forEach(x=>{if(Math.abs(f(x))<1e-9)r.push(x)});
+  for(let i=0;i<edges.length-1;i++){const lo=edges[i],hi=edges[i+1];if(f(lo)*f(hi)<0)r.push(bisect(f,lo,hi))}
+  return r.sort((x,y)=>x-y).filter((x,i,w)=>i===0||Math.abs(x-w[i-1])>1e-7)}
+function polyV(ts){
+  let h="";
+  ts.forEach(([v,x])=>{
+    if(!keys(v).length)return;
+    const multi=keys(v).length>1,n=multi?1:toNum(v),av=n<0?neg(v):v;
+    const one=isRat(av)&&ratOf(av).n===1n&&ratOf(av).d===1n;
+    let cs=(one&&x)?"":show(av);
+    if(cs&&keys(av).length>1)cs=`(${cs})`;
+    h+=h?(n<0?" − ":" + "):(n<0?"−":"");
+    h+=cs+x});
+  return h||"0"}
+const shiftStr=(base,v)=>base+(!keys(v).length?"":toNum(v)>0?` + ${show(v)}`:` − ${show(neg(v))}`);
+const eqLine=h=>`<div class="res big">y = ${h}</div>`;
+const FN={
+ quad:V=>{
+  const{a,b,c}=V;
+  if(!keys(a).length)throw Error("a must not be 0");
+  const exact=[a,b,c].every(isRat),na=toNum(a),nb=toNum(b),nc=toNum(c);
+  const Q=exact?v=>({h:show(v),n:toNum(v)}):n=>({h:fg(n),n});
+  let Dq,txq,tyq,rq=[];
+  if(exact){
+    const D=add(mul(b,b),mul({"1":F(4n)},mul(a,c)),-1n),twoA=mul({"1":F(2n)},a),nb_=neg(b);
+    Dq=Q(D);txq=Q(div(nb_,twoA));tyq=Q(add(c,div(mul(b,b),mul({"1":F(4n)},a)),-1n));
+    if(Dq.n>=0)rq=qsolve(a,b,c).map(Q);
+    if(Dq.n>0&&rq.length===1)rq=[rq[0]]}
+  else{
+    const D=nb*nb-4*na*nc;Dq=Q(D);txq=Q(-nb/(2*na));tyq=Q(nc-nb*nb/(4*na));
+    if(D>=0)rq=[Q((-nb-Math.sqrt(D))/(2*na)),Q((-nb+Math.sqrt(D))/(2*na))].sort((p,q)=>p.n-q.n)}
+  let h=eqLine(polyV([[a,"x²"],[b,"x"],[c,""]]))+row("Δ =",Dq.h);
+  if(!rq.length)h+=row("","No real roots (Δ &lt; 0)");
+  else if(rq.length===1)h+=`<div class="res"><span class="lb">x =</span>${rq[0].h}</div>`+sub("equal roots (Δ = 0)");
+  else{h+=`<div class="res">${rq.map(r=>`<span class="lb">x =</span>${r.h}`).join(ORX)}</div>`;
+    if(rq.some(r=>r.h.includes("<svg")))h+=sub(`≈ ${d2(rq[0].n)} or ${d2(rq[1].n)}`)}
+  h+=`<div class="res"><span class="lb">TP</span>${pt(txq,tyq)}</div>`;
+  h+=sub(na>0?"Minimum turning point (a &gt; 0, parabola opens up)":"Maximum turning point (a &lt; 0, parabola opens down)");
+  h+=row("Axis:",`x = ${txq.h}`)+row("y-intercept:",`( 0 ; ${exact?show(c):fg(nc)} )`);
+  return h},
+ hyp:V=>{
+  const{a,p,q}=V;
+  if(!keys(a).length)throw Error("a must not be 0");
+  const na=toNum(a),np=toNum(p),nq=toNum(q);
+  let h=eqLine(FRc(show(a),shiftStr("x",neg(p)))+shiftStr("",q))+row("Asymptotes:",`x = ${show(p)} and y = ${show(q)}`);
+  if(!keys(p).length)h+=row("y-intercept:","none (the y-axis is an asymptote)");
+  else{const y=QX(()=>dif(q,div(a,p)),nq-na/np);h+=row("y-intercept:",`( 0 ; ${y.h} )`)}
+  if(!keys(q).length)h+=row("x-intercept:","none (the x-axis is an asymptote)");
+  else{const x=QX(()=>dif(p,div(a,q)),np-na/nq);h+=row("x-intercept:",`( ${x.h} ; 0 )`)}
+  h+=row("Domain:",`x ∈ ℝ, x ≠ ${show(p)}`)+row("Range:",`y ∈ ℝ, y ≠ ${show(q)}`);
+  h+=row("Symmetry:",`${lineEq("x",dif(q,p))} ${ORX} ${lineEq("−x",add(p,q))}`);
+  h+=sub(na>0?"a &gt; 0: each branch decreases; curve lies top-right and bottom-left of the asymptotes":"a &lt; 0: each branch increases; curve lies top-left and bottom-right of the asymptotes");
+  return h},
+ exp:V=>{
+  const{a,b,p,q}=V,na=toNum(a),nb=toNum(b),np=toNum(p),nq=toNum(q);
+  if(!keys(a).length)throw Error("a must not be 0");
+  if(!(nb>0)||nb===1)throw Error("b must be positive and not 1");
+  const oneA=isRat(a)&&ratOf(a).n===1n&&ratOf(a).d===1n,mOne=isRat(a)&&ratOf(a).n===-1n&&ratOf(a).d===1n;
+  const bStr=(isRat(b)&&ratOf(b).d===1n)?show(b):`(${show(b)})`;
+  let h=eqLine(`${oneA?"":mOne?"−":show(a)+"·"}${bStr}<sup>${shiftStr("x",p)}</sup>${shiftStr("",q)}`)+row("Asymptote:",`y = ${show(q)}`);
+  const y=QX(()=>add(mul(a,pow(b,p)),q),na*Math.pow(nb,np)+nq);
+  h+=row("y-intercept:",`( 0 ; ${y.h} )`);
+  const r=-nq/na;
+  if(r>0){const x=Math.log(r)/Math.log(nb)-np;h+=row("x-intercept:",`( ${d2(x)} ; 0 )`)+sub("x = log<sub>b</sub>(−q ÷ a) − p, rounded")}
+  else h+=row("x-intercept:","none");
+  h+=row("Domain:","x ∈ ℝ")+row("Range:",`y ${na>0?"&gt;":"&lt;"} ${show(q)}`);
+  const up=(na>0)===(nb>1);
+  h+=sub(up?"The function is increasing":"The function is decreasing");
+  return h},
+ cub:V=>{
+  const{a,b,c,d}=V;
+  if(!keys(a).length)throw Error("a must not be 0");
+  const exact=[a,b,c,d].every(isRat),na=toNum(a),nb=toNum(b),nc=toNum(c),nd=toNum(d);
+  const f=x=>((na*x+nb)*x+nc)*x+nd;
+  const pe=x=>add(mul(add(mul(add(mul(a,x),b),x),c),x),d);
+  let h=eqLine(polyV([[a,"x³"],[b,"x²"],[c,"x"],[d,""]]))+row("y-intercept:",`( 0 ; ${exact?show(d):fg(nd)} )`);
+  // roots
+  let roots=[];
+  if(exact){
+    const ints=ratInts([a,b,c,d]),rr=ints?findRatRoot(...ints):null;
+    if(rr){
+      const rv={"1":F(BigInt(rr[0]),BigInt(rr[1]))},B2=add(b,mul(a,rv)),C2=add(c,mul(B2,rv));
+      roots=[rv,...qsolve(a,B2,C2)].map(v=>({h:show(v),n:toNum(v)}))}}
+  let approx=false;
+  if(!roots.length){roots=numRoots(na,nb,nc,nd).map(x=>({h:d2(x),n:x}));approx=true}
+  roots=roots.sort((x,y)=>x.n-y.n).filter((x,i,w)=>i===0||Math.abs(x.n-w[i-1].n)>1e-9);
+  h+=`<div class="res">${roots.map(r=>`<span class="lb">x =</span>${r.h}`).join(ORX)}</div>`;
+  if(approx)h+=sub("roots rounded to 2 decimals");
+  else if(roots.some(r=>r.h.includes("<svg")))h+=sub(`≈ ${roots.map(r=>d2(r.n)).join(" or ")}`);
+  // turning points
+  let tps=[];
+  if(exact){
+    const D=add(mul(b,b),mul(three,mul(a,c)),-1n);
+    if(toNum(D)>0){const s=sqrt(D),tA=mul(three,a),nb_=neg(b);
+      tps=[add(nb_,s),add(nb_,s,-1n)].map(n=>div(n,tA)).map(xv=>{const yv=pe(xv);return{x:{h:show(xv),n:toNum(xv)},y:{h:show(yv),n:toNum(yv)}}})}}
+  else{
+    const D=nb*nb-3*na*nc;
+    if(D>0)tps=[(-nb-Math.sqrt(D))/(3*na),(-nb+Math.sqrt(D))/(3*na)].map(x=>({x:{h:fg(x),n:x},y:{h:fg(f(x)),n:f(x)}}))}
+  tps.sort((p,q)=>p.x.n-q.x.n);
+  if(tps.length===2){
+    const first=na>0?"Local max":"Local min",second=na>0?"Local min":"Local max";
+    h+=row(first+":",pt(tps[0].x,tps[0].y))+row(second+":",pt(tps[1].x,tps[1].y))}
+  else h+=row("Turning points:","none");
+  // point of inflection
+  const xi=exact?div(neg(b),mul(three,a)):null;
+  if(exact){const yi=pe(xi);h+=row("Inflection:",pt({h:show(xi)},{h:show(yi)}))}
+  else{const x=-nb/(3*na);h+=row("Inflection:",pt({h:fg(x)},{h:fg(f(x))}))}
+  return h}};
+const fnHint=document.createElement("div");
+function applyFn(){
+  const ks=FKEYS[fname];
+  Object.keys(fnRow).forEach(k=>fnRow[k].hidden=!ks.includes(k));
+  ks.forEach(k=>{fnRow[k].firstChild.innerHTML=FLBL[fname][k];fnEl.appendChild(fnRow[k])});
+  fnHint.innerHTML=`<div class="res">${FFORM[fname]}</div><div class="dec" style="font-size:13px;margin:4px 0 10px">Enter the values to see the key features of the graph.</div>`}
+const fnChips=chips("Function:",[["Quadratic","quad"],["Hyperbola","hyp"],["Exponential","exp"],["Cubic","cub"]],v=>{
+  fname=v;mark(fnChips,v);applyFn();out.innerHTML="";
+  if(!fnList().includes(A))fnList()[0].host.focus({preventScroll:true});
+  refresh()});
+fnEl.append(fnChips,fnHint);
+["a","b","c","d","p","q"].forEach(k=>{
+  const r=document.createElement("div");r.className="fld";
+  const lb=document.createElement("div");lb.className="lb2";
+  const dv=document.createElement("div");dv.className="ed sm";
+  fnE[k]=Ed(dv);r.append(lb,dv);fnRow[k]=r;fnEl.appendChild(r)});
+mark(fnChips,"quad");applyFn();
+function fnCalc(){
+  const ks=FKEYS[fname];
+  if(ks.some(k=>!fnE[k].root.items.length)){out.innerHTML=`<span class="dec">Enter ${ks.join(", ")}</span>`;return}
+  try{
+    const V={};ks.forEach(k=>{V[k]=evaluate(ser(fnE[k].root))});
+    out.innerHTML=FN[fname](V)}
+  catch(e){out.innerHTML=`<span class="dec">${e.message}</span>`}}
+// ---------- number patterns: enter the first terms ----------
+const patEl=document.getElementById("pat"),patE={},patRow={};
+const PL={T1:"First term T<sub>1</sub>",T2:"Second term T<sub>2</sub>",T3:"Third term T<sub>3</sub>",n:"Term number n (optional)"};
+const sg=x=>(x<0?" − ":" + ")+fg(Math.abs(x));
+const isInt=x=>Math.abs(x-Math.round(x))<1e-9;
+function poly(ts){let h="";ts.forEach(([c,v])=>{if(Math.abs(c)<1e-12)return;const ab=Math.abs(c),cs=(ab===1&&v)?"":fg(ab);h+=h?(c<0?" − ":" + "):(c<0?"−":"");h+=cs+v});return h||"0"}
+const PAT={
+ lin:{vars:["T1","T2"],formula:"T<sub>n</sub> = dn + c",
+  note:"Enter the first two terms. Add n to get T<sub>n</sub>.",
+  run:(v,n)=>{
+    const d=v.T2-v.T1,c=v.T1-d;
+    let h=row("d =",`${fg(v.T2)} − ${fg(v.T1)} = ${fg(d)}`)
+      +row("c =",`${fg(v.T1)} − ${fg(d)} = ${fg(c)}`)
+      +`<div class="res big">T<sub>n</sub> = ${poly([[d,"n"],[c,""]])}</div>`;
+    if(n!==null){
+      const Tn=d*n+c;
+      h+=row(`T<sub>${n}</sub> =`,`${fg(d)}(${n})${c===0?"":sg(c)} = ${fg(Tn)}`)}
+    return h}},
+ ari:{vars:["T1","T2"],formula:"T<sub>n</sub> = a + (n − 1)d",
+  note:"Enter the first two terms. Add n to get T<sub>n</sub> and S<sub>n</sub>.",
+  run:(v,n)=>{
+    const a=v.T1,d=v.T2-v.T1;
+    let h=row("a =",fg(a))+row("d =",`${fg(v.T2)} − ${fg(v.T1)} = ${fg(d)}`)
+      +`<div class="res big">T<sub>n</sub> = ${fg(a)} + (n − 1)(${fg(d)})</div>`
+      +sub(`= ${poly([[d,"n"],[a-d,""]])}`);
+    if(n!==null){
+      const Tn=a+(n-1)*d,Sn=n/2*(2*a+(n-1)*d);
+      h+=row(`T<sub>${n}</sub> =`,`${fg(a)} + (${n} − 1)(${fg(d)}) = ${fg(Tn)}`)
+        +row(`S<sub>${n}</sub> =`,`${n} ÷ 2 × [2(${fg(a)}) + (${n} − 1)(${fg(d)})] = ${fg(Sn)}`)
+        +sub("S<sub>n</sub> = n ÷ 2 × [2a + (n − 1)d]")}
+    return h}},
+ geo:{vars:["T1","T2"],formula:"T<sub>n</sub> = a·r<sup>n − 1</sup>",
+  note:"Enter the first two terms. Add n to get T<sub>n</sub> and S<sub>n</sub>.",
+  run:(v,n)=>{
+    if(v.T1===0)throw Error("T<sub>1</sub> must not be 0");
+    const a=v.T1,r=v.T2/v.T1,rr=r<0?`(${fg(r)})`:fg(r);
+    let h=row("a =",fg(a))+row("r =",`${fg(v.T2)} ÷ ${fg(v.T1)} = ${fg(r)}`)
+      +`<div class="res big">T<sub>n</sub> = ${fg(a)} × ${rr}<sup>n − 1</sup></div>`;
+    if(n!==null){
+      const Tn=a*Math.pow(r,n-1),Sn=r===1?a*n:a*(Math.pow(r,n)-1)/(r-1);
+      h+=row(`T<sub>${n}</sub> =`,`${fg(a)} × ${rr}<sup>${n - 1}</sup> = ${fg(Tn)}`)
+        +row(`S<sub>${n}</sub> =`,r===1?`${fg(a)} × ${n} = ${fg(Sn)}`:`${fg(a)}(${rr}<sup>${n}</sup> − 1) ÷ (${fg(r)} − 1) = ${fg(Sn)}`)
+        +sub("S<sub>n</sub> = a(r<sup>n</sup> − 1) ÷ (r − 1)")}
+    h+=Math.abs(r)<1?row("S<sub>∞</sub> =",`${fg(a)} ÷ (1 − ${rr}) = ${fg(a/(1-r))}`)+sub("S<sub>∞</sub> = a ÷ (1 − r), valid for −1 &lt; r &lt; 1")
+      :sub("S<sub>∞</sub> does not exist because r is not between −1 and 1");
+    return h}},
+ quad:{vars:["T1","T2","T3"],formula:"T<sub>n</sub> = an² + bn + c",
+  note:"Enter the first three terms. Add n to get T<sub>n</sub>.",
+  run:(v,n)=>{
+    const d1=v.T2-v.T1,d2=v.T3-v.T2,D2=d2-d1,a=D2/2,b=d1-3*a,c=v.T1-a-b;
+    let h=row("1st differences:",`${fg(d1)} ; ${fg(d2)}`)+row("2nd difference:",fg(D2))
+      +row("a =",`${fg(D2)} ÷ 2 = ${fg(a)}`)+row("b =",`${fg(d1)} − 3(${fg(a)}) = ${fg(b)}`)
+      +row("c =",`${fg(v.T1)} − ${fg(a)} − ${fg(b)} = ${fg(c)}`)
+      +`<div class="res big">T<sub>n</sub> = ${poly([[a,"n²"],[b,"n"],[c,""]])}</div>`;
+    if(D2===0)h+=sub("The second difference is 0, so this is a linear sequence.");
+    if(n!==null)h+=row(`T<sub>${n}</sub> =`,`${fg(a)}(${n})²${sg(b)}(${n})${sg(c)} = ${fg(a*n*n+b*n+c)}`);
+    return h}}};
+Object.assign(PL,{d:"Common difference d",c:"Constant c",a:"First term a",r:"Common ratio r",T:"Value of T<sub>n</sub>",S:"Sum S<sub>n</sub>",Si:"Sum to infinity S<sub>∞</sub>",qa:"Coefficient a",qb:"Coefficient b",qc:"Coefficient c"});
+const SYMP={d:"d",c:"c",n:"n",T:"T<sub>n</sub>",a:"a",r:"r",S:"S<sub>n</sub>",Si:"S<sub>∞</sub>",qa:"a",qb:"b",qc:"c"};
+const pl=(v,t,u,k)=>(k===u||v[k]>=0)?` + ${t[k]}`:` − ${fg(-v[k])}`;
+const ntx=(v,u)=>u==="n"?"n":fg(v.n);
+function rroot(x,k){
+  if(k===0)throw Error("n must not be 1");
+  if(x>=0)return Math.pow(x,1/k);
+  if(Number.isInteger(k)&&Math.abs(k)%2===1)return-Math.pow(-x,1/k);
+  throw Error("No real common ratio")}
+const rootsN=(A_,B_,C_)=>{const D=B_*B_-4*A_*C_;if(D<0)throw Error("No real value of n");const s=Math.sqrt(D);return[(-B_-s)/(2*A_),(-B_+s)/(2*A_)].sort((x,y)=>x-y)};
+PAT.lin.eq={tn:{vars:["d","c","n","T"],formula:"T<sub>n</sub> = dn + c",
+  solve:{T:v=>v.d*v.n+v.c,c:v=>v.T-v.d*v.n,
+    d:v=>{if(v.n===0)throw Error("n must not be 0");return(v.T-v.c)/v.n},
+    n:v=>{if(v.d===0)throw Error("d must not be 0");return(v.T-v.c)/v.d}},
+  tpl:(v,t,u)=>`${t.T} = ${t.d}(${t.n})${pl(v,t,u,"c")}`}};
+PAT.ari.eq={
+  tn:{vars:["a","d","n","T"],formula:"T<sub>n</sub> = a + (n − 1)d",
+    solve:{T:v=>v.a+(v.n-1)*v.d,a:v=>v.T-(v.n-1)*v.d,
+      d:v=>{if(v.n===1)throw Error("n must not be 1");return(v.T-v.a)/(v.n-1)},
+      n:v=>{if(v.d===0)throw Error("d must not be 0");return 1+(v.T-v.a)/v.d}},
+    tpl:(v,t,u)=>`${t.T} = ${t.a} + (${ntx(v,u)} − 1)(${t.d})`},
+  sn:{vars:["a","d","n","S"],formula:"S<sub>n</sub> = n ÷ 2 × [2a + (n − 1)d]",
+    solve:{S:v=>v.n/2*(2*v.a+(v.n-1)*v.d),
+      a:v=>{if(v.n===0)throw Error("n must not be 0");return(2*v.S/v.n-(v.n-1)*v.d)/2},
+      d:v=>{if(v.n===1)throw Error("n must not be 1");return(2*v.S/v.n-2*v.a)/(v.n-1)},
+      n:v=>{if(v.d===0){if(v.a===0)throw Error("a must not be 0");return v.S/v.a}return rootsN(v.d/2,v.a-v.d/2,-v.S)}},
+    tpl:(v,t,u)=>{const nn=ntx(v,u);return`${t.S} = ${nn} ÷ 2 × [2(${t.a}) + (${nn} − 1)(${t.d})]`}}};
+PAT.geo.eq={
+  tn:{vars:["a","r","n","T"],formula:"T<sub>n</sub> = a·r<sup>n − 1</sup>",
+    solve:{T:v=>v.a*Math.pow(v.r,v.n-1),a:v=>v.T/Math.pow(v.r,v.n-1),
+      r:v=>rroot(v.T/v.a,v.n-1),
+      n:v=>{const q=v.T/v.a;if(!(q>0&&v.r>0&&v.r!==1))throw Error("Needs T<sub>n</sub> ÷ a &gt; 0, r &gt; 0 and r ≠ 1");return 1+Math.log(q)/Math.log(v.r)}},
+    tpl:(v,t,u)=>{const rr=(u!=="r"&&v.r<0)?`(${t.r})`:t.r;return`${t.T} = ${t.a} × ${rr}<sup>${u==="n"?"n − 1":fg(v.n-1)}</sup>`}},
+  sn:{vars:["a","r","n","S"],formula:"S<sub>n</sub> = a(r<sup>n</sup> − 1) ÷ (r − 1)",
+    solve:{S:v=>v.r===1?v.a*v.n:v.a*(Math.pow(v.r,v.n)-1)/(v.r-1),
+      a:v=>v.r===1?v.S/v.n:v.S*(v.r-1)/(Math.pow(v.r,v.n)-1),
+      n:v=>{if(v.r===1)return v.S/v.a;const q=1+v.S*(v.r-1)/v.a;if(!(q>0&&v.r>0))throw Error("No real value of n");return Math.log(q)/Math.log(v.r)},
+      r:v=>{try{return bisect(r=>(Math.abs(r-1)<1e-12?v.a*v.n:v.a*(Math.pow(r,v.n)-1)/(r-1))-v.S,-0.99,100)}catch(e){throw Error("No solution for r with these values")}}},
+    tpl:(v,t,u)=>{const nn=ntx(v,u),rr=(u!=="r"&&v.r<0)?`(${t.r})`:t.r;return`${t.S} = ${t.a}(${rr}<sup>${nn}</sup> − 1) ÷ (${rr} − 1)`}}};
+PAT.geo.eq.si={vars:["a","r","Si"],formula:"S<sub>∞</sub> = a ÷ (1 − r), for −1 &lt; r &lt; 1",
+  solve:{Si:v=>{if(!(Math.abs(v.r)<1))throw Error("S∞ exists only when −1 < r < 1");return v.a/(1-v.r)},
+    a:v=>{if(!(Math.abs(v.r)<1))throw Error("S∞ exists only when −1 < r < 1");return v.Si*(1-v.r)},
+    r:v=>{const r=1-v.a/v.Si;if(!(Math.abs(r)<1))throw Error("No valid r: S∞ needs −1 < r < 1");return r}},
+  tpl:(v,t,u)=>`${t.Si} = ${t.a} ÷ (1 − ${(u!=="r"&&v.r<0)?`(${t.r})`:t.r})`};
+PAT.quad.eq={tn:{vars:["qa","qb","qc","n","T"],formula:"T<sub>n</sub> = an² + bn + c",
+  solve:{T:v=>v.qa*v.n*v.n+v.qb*v.n+v.qc,
+    qa:v=>{if(v.n===0)throw Error("n must not be 0");return(v.T-v.qb*v.n-v.qc)/(v.n*v.n)},
+    qb:v=>{if(v.n===0)throw Error("n must not be 0");return(v.T-v.qa*v.n*v.n-v.qc)/v.n},
+    qc:v=>v.T-v.qa*v.n*v.n-v.qb*v.n,
+    n:v=>{const C=v.qc-v.T;if(v.qa===0){if(v.qb===0)throw Error("No solution");return-C/v.qb}return rootsN(v.qa,v.qb,C)}},
+  tpl:(v,t,u)=>`${t.T} = ${t.qa}(${t.n})²${pl(v,t,u,"qb")}(${t.n})${pl(v,t,u,"qc")}`}};
+let ptype="lin",pmode="terms",pmChips=null;
+const curP=()=>pmode==="terms"?PAT[ptype]:PAT[ptype].eq[pmode];
+const patShown=()=>pmode==="terms"?PAT[ptype].vars.concat("n"):curP().vars;
+const patList=()=>patShown().map(k=>patE[k]);
+const pHint=document.createElement("div");
+function applyPat(){
+  const P=curP(),shown=patShown(),isEq=pmode!=="terms";
+  Object.keys(PL).forEach(k=>patRow[k].hidden=!shown.includes(k));
+  shown.forEach(k=>patEl.appendChild(patRow[k]));
+  patRow.n.firstChild.innerHTML=isEq?"Term number n":"Term number n (optional)";
+  pHint.innerHTML=`<div class="res">${P.formula}</div><div class="dec" style="font-size:13px;margin:4px 0 10px">${isEq?"Fill in all but one value. The empty one is solved.":P.note}</div>`}
+function refocusPat(){out.innerHTML="";if(!patList().includes(A))patList()[0].host.focus({preventScroll:true});refresh()}
+function buildPm(){
+  const eq=PAT[ptype].eq,items=[["From terms","terms"]];
+  if(eq.tn)items.push(["Solve Tn","tn"]);
+  if(eq.sn)items.push(["Solve Sn","sn"]);
+  if(eq.si)items.push(["Solve S∞","si"]);
+  const nc=chips("Mode:",items,v=>{pmode=v;mark(nc,v);applyPat();refocusPat()});
+  nc.classList.add("alt");
+  mark(nc,pmode);
+  if(pmChips)patEl.replaceChild(nc,pmChips);else patEl.insertBefore(nc,pHint);
+  pmChips=nc}
+const ptChips=chips("Pattern:",[["Linear","lin"],["Arithmetic","ari"],["Geometric","geo"],["Quadratic","quad"]],v=>{
+  ptype=v;pmode="terms";mark(ptChips,v);buildPm();applyPat();refocusPat()});
+patEl.append(ptChips,pHint);
+Object.keys(PL).forEach(k=>{
+  const r=document.createElement("div");r.className="fld";
+  const lb=document.createElement("div");lb.className="lb2";lb.innerHTML=PL[k];
+  const d=document.createElement("div");d.className="ed sm";
+  patE[k]=Ed(d);r.append(lb,d);patRow[k]=r;patEl.appendChild(r)});
+mark(ptChips,"lin");buildPm();applyPat();
+function patCalc(){
+  const P=curP(),vars=P.vars,empty=vars.filter(k=>!patE[k].root.items.length);
+  const g=k=>toNum(evaluate(ser(patE[k].root)));
+  if(pmode==="terms"){
+    if(empty.length){out.innerHTML=`<span class="dec">Enter the first ${vars.length} terms</span>`;return}
+    try{
+      const v={};vars.forEach(k=>{v[k]=g(k)});
+      let n=null;
+      if(patE.n.root.items.length){
+        n=g("n");
+        if(!(isInt(n)&&n>=1))throw Error("n must be a positive whole number");
+        n=Math.round(n)}
+      out.innerHTML=P.run(v,n)}
+    catch(e){out.innerHTML=`<span class="dec">${e.message}</span>`}
+    return}
+  if(empty.length!==1){out.innerHTML=`<span class="dec">${empty.length?"Fill in all but one of "+vars.map(k=>SYMP[k]).join(", "):"Leave one value empty to solve for it"}</span>`;return}
+  try{
+    const u=empty[0],v={},t={};
+    vars.forEach(k=>{if(k!==u)v[k]=g(k)});
+    vars.forEach(k=>{t[k]=k===u?SYMP[k]:fg(v[k])});
+    const res=P.solve[u](v),arr=[].concat(res).filter((z,i,w)=>i===0||Math.abs(z-w[i-1])>1e-12);
+    if(!arr.every(isFinite))throw Error("Check your values");
+    let h=sub(P.tpl(v,t,u))
+      +`<div class="res big">${arr.map(z=>`<span class="lb">${SYMP[u]} =</span>${fg(z)}`).join('<span class="lb" style="margin:0 10px">or</span>')}</div>`;
+    if(u==="n"){const ok=arr.filter(z=>isInt(z)&&z>=1);
+      h+=sub(ok.length?`n = ${ok.map(z=>Math.round(z)).join(" or ")} gives a term of the sequence`:"n is not a positive whole number, so this value is not a term of the sequence")}
+    out.innerHTML=h}
+  catch(e){out.innerHTML=`<span class="dec">${e.message}</span>`}}
+// ---------- statistics ----------
+const statEl=document.getElementById("stat"),rows=[];
+let smode="uni";
+const statList=()=>rows.flatMap(r=>smode==="bi"?[r.x,r.y,r.f]:[r.x,r.f]);
+const sHead=document.createElement("div");sHead.className="strow sthead";
+const tbl=document.createElement("div");
+function applyStat(){
+  const bi=smode==="bi";
+  sHead.className="strow sthead"+(bi?" bi":"");
+  sHead.innerHTML=bi?"<span></span><span>x</span><span>y</span><span>f</span>":"<span></span><span>x</span><span>f</span>";
+  rows.forEach((r,i)=>{r.el.className="strow"+(bi?" bi":"");r.y.host.style.display=bi?"":"none";r.idx.textContent=i+1})}
+function mkRow(){
+  const el=document.createElement("div"),idx=document.createElement("span");idx.className="idx";
+  const mk=ph=>{const d=document.createElement("div");d.className="ed sm";const E=Ed(d);if(ph)E.root.ph=ph;return E};
+  const x=mk(),y=mk(),f=mk("1");
+  el.append(idx,x.host,y.host,f.host);tbl.appendChild(el);rows.push({x,y,f,el,idx});applyStat();return x}
+function dropRow(){
+  if(rows.length<=1)return;
+  const r=rows.pop();[r.x,r.y,r.f].forEach(E=>{const i=editors.indexOf(E);if(i>=0)editors.splice(i,1)});
+  r.el.remove();
+  if(!statList().includes(A))rows[rows.length-1].x.host.focus({preventScroll:true});
+  applyStat()}
+const sChips=chips("Data:",[["One variable","uni"],["Two variables","bi"]],v=>{
+  smode=v;mark(sChips,v);applyStat();out.innerHTML="";
+  if(!statList().includes(A))statList()[0].host.focus({preventScroll:true});
+  refresh()});
+const sBtns=document.createElement("div");sBtns.className="chips";
+[["+ Row",()=>{mkRow().host.focus({preventScroll:true})}],["+ 5 rows",()=>{let x;for(let i=0;i<5;i++)x=mkRow();x.host.focus({preventScroll:true})}],["− Row",dropRow]].forEach(([t,fn])=>{
+  const b=document.createElement("button");b.textContent=t;b.onmousedown=e=>e.preventDefault();
+  b.onclick=()=>{fn();refresh()};sBtns.appendChild(b)});
+statEl.append(sChips,sHead,tbl,sBtns);
+for(let i=0;i<6;i++)mkRow();
+mark(sChips,"uni");applyStat();
+// --- helpers ---
+const k_=(k,v)=>`<span class="k">${k}</span><span>${v}</span>`;
+const kw=(k,v)=>`<span class="k">${k}</span><span class="s3">${v}</span>`;
+const stt=a=>`<div class="stt">${a.join("")}</div>`;
+const medOf=(kth,o,h)=>h%2?kth(o+(h+1)/2):(kth(o+h/2)+kth(o+h/2+1))/2;
+function readData(){
+  const bi=smode==="bi",pts=[];
+  rows.forEach((r,i)=>{
+    const hx=r.x.root.items.length,hy=r.y.root.items.length,hf=r.f.root.items.length;
+    if(!hx&&!(bi&&hy)){return}
+    if(bi&&(!hx||!hy))throw Error(`Row ${i+1} needs both x and y`);
+    const g=E=>toNum(evaluate(ser(E.root)));
+    const f=hf?g(r.f):1;
+    if(!(f>=0&&isInt(f)))throw Error(`Row ${i+1}: frequency must be a whole number`);
+    if(f===0)return;
+    pts.push([g(r.x),bi?g(r.y):0,Math.round(f)])});
+  return pts}
+function uniStats(pts){
+  const M=new Map();pts.forEach(([x,,f])=>M.set(x,(M.get(x)||0)+f));
+  const G=[...M.entries()].sort((a,b)=>a[0]-b[0]);
+  const N=G.reduce((t,[,f])=>t+f,0),sx=G.reduce((t,[x,f])=>t+x*f,0),sx2=G.reduce((t,[x,f])=>t+x*x*f,0);
+  const mean=sx/N,ss=G.reduce((t,[x,f])=>t+f*(x-mean)**2,0);
+  const pv=ss/N,sv=N>1?ss/(N-1):null;
+  const kth=k=>{let c=0;for(const[x,f] of G){c+=f;if(k<=c)return x}return G[G.length-1][0]};
+  const h=Math.floor(N/2),med=medOf(kth,0,N),q1=h?medOf(kth,0,h):med,q3=h?medOf(kth,N-h,h):med;
+  const mn=G[0][0],mx=G[G.length-1][0],iqr=q3-q1;
+  const maxf=Math.max(...G.map(g=>g[1])),modes=G.filter(g=>g[1]===maxf).map(g=>g[0]);
+  const allf1=pts.every(p=>p[2]===1);
+  const lo=q1-1.5*iqr,hi=q3+1.5*iqr,out_=G.map(g=>g[0]).filter(x=>x<lo||x>hi);
+  let h_=stt([k_("n",N),k_(allf1?"Σx":"Σfx",d2(sx)),k_("Mean",d2(mean)),k_("Std dev",d2(Math.sqrt(pv)))]);
+  h_+=stt([k_("Min",d2(mn)),k_("Q<sub>1</sub>",d2(q1)),k_("Median",d2(med)),k_("Q<sub>3</sub>",d2(q3)),
+    k_("Max",d2(mx)),k_("Range",d2(mx-mn)),k_("IQR",d2(iqr))]);
+  h_+=stt([kw("Mode",(maxf===1&&G.length>1)?"none":modes.map(d2).join(" ; ")),
+    kw("Outliers",out_.length?out_.map(d2).join(" ; "):"none")]);
+  h_+=sub("Standard deviation divides by n. Quartiles are the medians of the lower and upper halves.");
+  return h_}
+function biStats(pts){
+  const N=pts.reduce((t,p)=>t+p[2],0);
+  if(N<2)throw Error("Enter at least two data points");
+  const S=f=>pts.reduce((t,p)=>t+p[2]*f(p),0);
+  const sx=S(p=>p[0]),sy=S(p=>p[1]),sx2=S(p=>p[0]**2),sy2=S(p=>p[1]**2),sxy=S(p=>p[0]*p[1]);
+  const mx=sx/N,my=sy/N;
+  const Sxx=S(p=>(p[0]-mx)**2),Syy=S(p=>(p[1]-my)**2),Sxy=S(p=>(p[0]-mx)*(p[1]-my));
+  if(Sxx===0)throw Error("All x-values are equal: no regression line");
+  const b=Sxy/Sxx,a=my-b*mx,r=Syy===0?null:Sxy/Math.sqrt(Sxx*Syy);
+  let h=`<div class="res big">ŷ = ${d2(a)} ${b<0?"−":"+"} ${d2(Math.abs(b))}x</div>`;
+  h+=stt([k_("a",d2(a)),k_("b",d2(b)),k_("r",r===null?"–":d2(r))]);
+  if(r!==null){const ar=Math.abs(r);
+    h+=sub(`${ar>=0.8?"Strong":ar>=0.5?"Moderate":ar>=0.2?"Weak":"Very weak or no"} ${r<0?"negative":"positive"} correlation`)}
+  h+=stt([k_("n",N),k_("x̄",d2(mx)),k_("ȳ",d2(my))]);
+  h+=sub("ŷ = a + bx is the least squares regression line; r is the correlation coefficient.");
+  return h}
+function statCalc(){
+  try{
+    const pts=readData();
+    if(!pts.length){out.innerHTML='<span class="dec">Enter your data in the table (f is optional)</span>';return}
+    out.innerHTML=smode==="bi"?biStats(pts):uniStats(pts)}
+  catch(e){out.innerHTML=`<span class="dec">${e.message}</span>`}}
+// ---------- analytical geometry ----------
+const geo=document.getElementById("geo"),gE={},gBox={};
+const GL={x1:"x<sub>1</sub>",y1:"y<sub>1</sub>",x2:"x<sub>2</sub>",y2:"y<sub>2</sub>",m:"Gradient m",c:"y-intercept c",lx:"x",ly:"y",a:"a",b:"b",r:"Radius r",px:"x",py:"y"};
+const GTAB={
+  two:{formula:"",note:"Enter points A and B to get d, m, M, the line AB, the angle of inclination and the perpendicular bisector.",
+    req:["x1","y1","x2","y2"],prompt:"Enter points A and B",groups:[["Point A",["x1","y1"]],["Point B",["x2","y2"]]]},
+  line:{formula:"y = mx + c",note:"Enter m and c. Add a point P to get the parallel and perpendicular lines through it.",
+    req:["m","c"],prompt:"Enter m and c",groups:[["Line",["m","c"]],["Point P (optional)",["lx","ly"]]]},
+  circle:{formula:"(x − a)² + (y − b)² = r²",note:"Enter the centre C(a ; b) and the radius. Add a point P to test it and find the tangent.",
+    req:["a","b","r"],prompt:"Enter the centre and the radius",groups:[["Centre C(a ; b)",["a","b"]],["Radius",["r"]],["Point P (optional)",["px","py"]]]}};
+let gtab="two";
+const gList=()=>GTAB[gtab].groups.flatMap(g=>g[1]).map(k=>gE[k]);
+const gHint=document.createElement("div");
+function applyGeo(){
+  Object.keys(gBox).forEach(k=>gBox[k].hidden=k!==gtab);
+  gHint.innerHTML=`${GTAB[gtab].formula?`<div class="res">${GTAB[gtab].formula}</div>`:""}<div class="dec" style="font-size:13px;margin:4px 0 10px">${GTAB[gtab].note}</div>`}
+const gChips=chips("Topic:",[["Two points","two"],["Straight line","line"],["Circle","circle"]],v=>{
+  gtab=v;mark(gChips,v);applyGeo();out.innerHTML="";
+  if(!gList().includes(A))gList()[0].host.focus({preventScroll:true});
+  refresh()});
+geo.append(gChips,gHint);
+Object.keys(GTAB).forEach(t=>{
+  const box=document.createElement("div");
+  GTAB[t].groups.forEach(([title,ks])=>{
+    const gt=document.createElement("div");gt.className="gt";gt.textContent=title;
+    const grid=document.createElement("div");grid.className="fgrid";
+    ks.forEach(k=>{
+      const f=document.createElement("div");f.className="fld";
+      const lb=document.createElement("div");lb.className="lb2";lb.innerHTML=GL[k];
+      const d=document.createElement("div");d.className="ed sm";
+      gE[k]=Ed(d);f.append(lb,d);grid.appendChild(f)});
+    box.append(gt,grid)});
+  gBox[t]=box;geo.appendChild(box)});
+mark(gChips,"two");applyGeo();
+// --- helpers ---
+const gV=k=>evaluate(ser(gE[k].root)),gHas=k=>gE[k].root.items.length>0;
+const ONE={"1":F(1n)},MONE={"1":F(-1n)},TWO={"1":F(2n)};
+const needDec=v=>!(isRat(v)&&(keys(v).length===0||ratOf(v).d===1n));
+const ptS=(x,y)=>`(&nbsp;${show(x)}&nbsp;;&nbsp;${show(y)}&nbsp;)`;
+const lineY=(m,c)=>"y = "+polyV([[m,"x"],[c,""]]);
+const incl=m=>{let t=Math.atan(toNum(m))*180/Math.PI;if(t<0)t+=180;return t};
+const dist=(dx,dy)=>{const dd=Math.hypot(toNum(dx),toNum(dy));
+  try{const d=sqrt(add(mul(dx,dx),mul(dy,dy)));return{h:show(d),n:dd,dec:needDec(d)}}catch(e){return{h:d2(dd),n:dd,dec:false}}};
+// perpendicular line through (px,py) to a line with gradient m (m may be null for vertical)
+function perpThrough(m,px,py){
+  if(m===null)return`y = ${show(py)}`;
+  if(!keys(m).length)return`x = ${show(px)}`;
+  const mp=div(MONE,m);return lineY(mp,dif(py,mul(mp,px)))}
+const GEO={
+ two:()=>{
+  const[x1,y1,x2,y2]=["x1","y1","x2","y2"].map(gV);
+  const dx=dif(x2,x1),dy=dif(y2,y1),vert=!keys(dx).length;
+  const d=dist(dx,dy),mx=div(add(x1,x2),TWO),my=div(add(y1,y2),TWO);
+  let h=row("d =",d.h,d.dec?d.n:undefined);
+  let m=null;
+  if(vert)h+=row("m =","undefined (vertical line)");
+  else{m=div(dy,dx);h+=row("m =",show(m))}
+  h+=row("M =",ptS(mx,my));
+  h+=row("Line AB:",vert?`x = ${show(x1)}`:lineY(m,dif(y1,mul(m,x1))));
+  h+=row("θ =",`${d2(vert?90:incl(m))}°`)+sub("Angle of inclination: tan θ = m, measured from the positive x-axis");
+  h+=row("⊥ bisector:",perpThrough(m,mx,my));
+  return h},
+ line:()=>{
+  const m=gV("m"),c=gV("c"),nm=toNum(m);
+  let h=`<div class="res big">${lineY(m,c)}</div>`;
+  h+=row("y-intercept:",`( 0 ; ${show(c)} )`);
+  if(keys(m).length)h+=row("x-intercept:",`( ${show(div(neg(c),m))} ; 0 )`);
+  else h+=row("x-intercept:",keys(c).length?"none (the line is parallel to the x-axis)":"the line is the x-axis");
+  h+=row("θ =",`${d2(incl(m))}°`)+sub("Angle of inclination: tan θ = m");
+  h+=row("Perpendicular gradient:",keys(m).length?show(div(MONE,m)):"undefined (vertical lines)");
+  const hx=gHas("lx"),hy=gHas("ly");
+  if(hx!==hy)h+=sub("Enter both coordinates of P");
+  if(hx&&hy){
+    const px=gV("lx"),py=gV("ly"),on=!keys(dif(py,add(mul(m,px),c))).length;
+    h+=`<div class="res"><span class="lb">P</span>${ptS(px,py)} ${on?"lies on the line":"does not lie on the line"}</div>`;
+    h+=row("Parallel through P:",lineY(m,dif(py,mul(m,px))));
+    h+=row("Perpendicular through P:",perpThrough(m,px,py))}
+  return h},
+ circle:()=>{
+  const a=gV("a"),b=gV("b"),r=gV("r");
+  if(!(toNum(r)>0))throw Error("r must be positive");
+  const r2=mul(r,r),F_=dif(add(mul(a,a),mul(b,b)),r2);
+  const sq=base=>base==="x"||base==="y"?`${base}<sup>2</sup>`:`(${base})<sup>2</sup>`;
+  let h=`<div class="res big">${sq(shiftStr("x",neg(a)))} + ${sq(shiftStr("y",neg(b)))} = ${show(r2)}</div>`;
+  h+=row("Expanded:",`${polyV([[ONE,"x²"],[ONE,"y²"],[mul(MONE,mul(TWO,a)),"x"],[mul(MONE,mul(TWO,b)),"y"],[F_,""]])} = 0`);
+  h+=row("Centre:",ptS(a,b))+row("Radius:",show(r));
+  h+=row("Circumference:",`${show(mul(TWO,r))}π ≈ ${d2(2*Math.PI*toNum(r))}`)+row("Area:",`${show(r2)}π ≈ ${d2(Math.PI*toNum(r2))}`);
+  const hx=gHas("px"),hy=gHas("py");
+  if(hx!==hy)h+=sub("Enter both coordinates of P");
+  if(hx&&hy){
+    const px=gV("px"),py=gV("py"),u=dif(px,a),w=dif(py,b);
+    const d2v=add(mul(u,u),mul(w,w)),diff=toNum(dif(d2v,r2));
+    const dd=dist(u,w),state=Math.abs(diff)<1e-9?0:diff<0?-1:1;
+    h+=`<div class="res"><span class="lb">P</span>${ptS(px,py)}</div>`;
+    h+=row("CP =",dd.h,dd.dec?dd.n:undefined);
+    h+=`<div class="res big">P is ${state===0?"on the circle":state<0?"inside the circle":"outside the circle"}</div>`+sub(`CP ${state===0?"=":state<0?"&lt;":"&gt;"} r`);
+    if(state===0){
+      if(!keys(w).length)h+=row("Tangent at P:",`x = ${show(px)}`);
+      else if(!keys(u).length)h+=row("Tangent at P:",`y = ${show(py)}`);
+      else{
+        const mr=div(w,u),mt=div(neg(u),w);
+        h+=row("m<sub>CP</sub> =",show(mr))+row("m<sub>tangent</sub> =",`−1 ÷ m<sub>CP</sub> = ${show(mt)}`)
+          +row("Tangent at P:",lineY(mt,dif(py,mul(mt,px))))}}
+    else if(state>0){
+      const A_=dif(mul(u,u),r2),B_=mul(MONE,mul(TWO,mul(u,w))),C_=dif(mul(w,w),r2);
+      const ts=[];
+      if(!keys(A_).length){ts.push(`x = ${show(px)}`);ts.push(lineY(div(neg(C_),B_),dif(py,mul(div(neg(C_),B_),px))))}
+      else qsolve(A_,B_,C_).forEach(m=>ts.push(lineY(m,dif(py,mul(m,px)))));
+      h+=row("Tangents from P:",ts.join(ORX))}
+    else h+=sub("No tangent can be drawn from a point inside the circle")}
+  return h}};
+function geoCalc(){
+  const T=GTAB[gtab];
+  if(T.req.some(k=>!gHas(k))){out.innerHTML=`<span class="dec">${T.prompt}</span>`;return}
+  try{out.innerHTML=GEO[gtab]()}
+  catch(e){out.innerHTML=`<span class="dec">${e.message}</span>`}}
+// ---------- numeric evaluator (equations, tables, graphs) ----------
+const nCrN=(n,r,perm)=>{if(!(Number.isInteger(n)&&Number.isInteger(r)&&r>=0&&n>=r&&n<=1000))return NaN;let p=1;for(let i=0;i<r;i++)p*=n-i;if(perm)return p;let f=1;for(let i=2;i<=r;i++)f*=i;return p/f};
+const factN=v=>{if(!(v>=0&&Number.isInteger(v)&&v<=170))return NaN;let r=1;for(let i=2;i<=v;i++)r*=i;return r};
+function compileNum(str){
+  const t=tokenize(str);let p=0;
+  const peek=()=>t[p],next=()=>t[p++];
+  const FUN1=["sin","cos","tan","asin","acos","atan"],R_=angleMode==="rad"?1:Math.PI/180;
+  const START=["(","sqrt","√","root","logb","log","pi","e","abs","ln","M","Ans","mixed","factor","x","y",...FUN1];
+  const startsAtom=x=>x!==undefined&&(/^\d/.test(x)||START.includes(x));
+  const bin=(f,g,op)=>(x,y)=>op(f(x,y),g(x,y));
+  const closeP=()=>{if(peek()===")")next();else if(p<t.length)throw Error("Missing )")};
+  const open=w=>{if(next()!=="(")throw Error("Missing ( after "+w)};
+  const semi=()=>{if(next()!==";")throw Error("Missing separator")};
+  const TR={sin:v=>Math.sin(v*R_),cos:v=>Math.cos(v*R_),tan:v=>Math.tan(v*R_),asin:v=>Math.asin(v)/R_,acos:v=>Math.acos(v)/R_,atan:v=>Math.atan(v)/R_};
+  function expr(){let f=term();while(peek()==="+"||peek()==="-"||peek()==="−"){const o=next(),g=term();f=bin(f,g,o==="+"?(a,b)=>a+b:(a,b)=>a-b)}return f}
+  function term(){let f=unary();for(;;){const o=peek();
+    if(o==="*"||o==="×"){next();f=bin(f,unary(),(a,b)=>a*b)}
+    else if(o==="/"||o==="÷"){next();f=bin(f,unary(),(a,b)=>a/b)}
+    else if(startsAtom(o))f=bin(f,unary(),(a,b)=>a*b);
+    else return f}}
+  function unary(){
+    if(peek()==="-"||peek()==="−"){next();const g=unary();return(x,y)=>-g(x,y)}
+    if(peek()==="+"){next();return unary()}
+    return comb()}
+  function comb(){
+    let f=power();
+    while(peek()==="nCr"||peek()==="nPr"){const o=next(),g=power(),h=f;f=o==="nCr"?(x,y)=>nCrN(h(x,y),g(x,y),false):(x,y)=>nCrN(h(x,y),g(x,y),true)}
+    return f}
+  function power(){
+    let f=atom();
+    while(peek()==="!"||peek()==="%"){const o=next(),h=f;f=o==="!"?(x,y)=>factN(h(x,y)):(x,y)=>h(x,y)/100}
+    if(peek()==="^"){next();const g=unary(),h=f;return(x,y)=>Math.pow(h(x,y),g(x,y))}
+    return f}
+  function atom(){
+    const x=next();
+    if(x===undefined)throw Error("Expression ended early");
+    if(/^\d/.test(x)){const v=parseFloat(x.replace(",","."));return()=>v}
+    if(x==="("){const f=expr();closeP();return f}
+    if(x==="sqrt"||x==="√"){const f=atom();return(a,b)=>Math.sqrt(f(a,b))}
+    if(x==="pi")return()=>Math.PI;
+    if(x==="e")return()=>Math.E;
+    if(x==="abs"){open(x);const f=expr();closeP();return(a,b)=>Math.abs(f(a,b))}
+    if(x==="ln"){open(x);const f=expr();closeP();return(a,b)=>Math.log(f(a,b))}
+    if(x==="log"){open(x);const f=expr();closeP();return(a,b)=>Math.log10(f(a,b))}
+    if(x==="M"){const v=memory?toNum(memory):NaN;return()=>v}
+    if(x==="x")return a=>a;
+    if(x==="y")return(a,b)=>b;
+    if(x==="Ans"){const v=lastAns?toNum(lastAns):NaN;return()=>v}
+    if(TR[x]){open(x);const f=expr();closeP();const fn=TR[x];return(a,b)=>fn(f(a,b))}
+    if(x==="root"){open(x);const n=expr();semi();const f=expr();closeP();
+      return(a,b)=>{const k=n(a,b),v=f(a,b);return(v<0&&k%2!==0)?-Math.pow(-v,1/k):Math.pow(v,1/k)}}
+    if(x==="logb"){open(x);const bs=expr();semi();const f=expr();closeP();return(a,b)=>Math.log(f(a,b))/Math.log(bs(a,b))}
+    if(x==="mixed"){open(x);const w=expr();semi();const n=expr();semi();const d=expr();closeP();
+      return(a,b)=>{const W=w(a,b),q=n(a,b)/d(a,b);return W<0?W-q:W+q}}
+    if(x==="factor"){open(x);const f=expr();closeP();return f}
+    throw Error("Unexpected “"+x+"”")}
+  const f=expr();
+  if(p<t.length)throw Error("Unexpected “"+t[p]+"”");
+  return f}
+// ---------- equation solver ----------
+const eqEl=document.getElementById("eq"),eqE={},eqRow={};
+let etab="one";
+const eqList=()=>etab==="one"?[eqE.e1]:[eqE.e1,eqE.e2];
+const eqHint=document.createElement("div");
+function applyEq(){
+  eqRow.e2.hidden=etab==="one";
+  eqRow.e1.firstChild.textContent=etab==="one"?"Equation":"Equation 1";
+  eqHint.innerHTML=`<div class="res">${etab==="one"?"2x + 3 = 11":"2x + y = 7 &nbsp;and&nbsp; x − y = 2"}</div><div class="dec" style="font-size:13px;margin:4px 0 10px">Type each equation with the = key. Shift + ( gives x and Shift + ) gives y.</div>`}
+const eqChips=chips("Equations:",[["One variable","one"],["Two variables","two"]],v=>{
+  etab=v;mark(eqChips,v);applyEq();out.innerHTML="";
+  if(!eqList().includes(A))eqList()[0].host.focus({preventScroll:true});
+  refresh()});
+eqEl.append(eqChips,eqHint);
+["e1","e2"].forEach(k=>{
+  const r=document.createElement("div");r.className="fld";
+  const lb=document.createElement("div");lb.className="lb2";
+  const d=document.createElement("div");d.className="ed sm";
+  eqE[k]=Ed(d);r.append(lb,d);eqRow[k]=r;eqEl.appendChild(r)});
+mark(eqChips,"one");applyEq();
+// --- exact helpers on fractions ---
+const fsub=(a,b)=>fadd(a,F(-b.n,b.d)),fdiv=(a,b)=>fmul(a,F(b.d,b.n)),Vf=f=>f.n===0n?{}:{"1":f};
+const padd=(a,b)=>Array.from({length:Math.max(a.length,b.length)},(_,i)=>fadd(a[i]||F(0n),b[i]||F(0n)));
+const pscale=(a,c)=>a.map(x=>fmul(x,c));
+const pmul=(a,b)=>{const r=Array.from({length:a.length+b.length-1},()=>F(0n));a.forEach((x,i)=>b.forEach((y,j)=>{r[i+j]=fadd(r[i+j],fmul(x,y))}));return r};
+const peval=(a,x)=>a.reduceRight((t,c)=>fadd(fmul(t,x),c),F(0n));
+function exactAt(str,m){
+  const v=evaluate(tokenize(str).map(t=>t==="x"?`(${m.x})`:t==="y"?`(${m.y})`:t).join(""));
+  if(v[APX]||!isRat(v))throw Error("not exact");
+  return ratOf(v)}
+function splitEq(E){
+  const it=E.root.items,k=it.indexOf("=");
+  if(k<0)throw Error("Add an equals sign with the = key");
+  if(it.indexOf("=",k+1)>=0)throw Error("Use only one = sign");
+  const l=it.slice(0,k),r=it.slice(k+1);
+  if(!l.length||!r.length)throw Error("Both sides of the equation need something");
+  return`((${serItems(l)})-(${serItems(r)}))`}
+function polyFit1(str){
+  try{
+    const N=8,vals=[...Array(N).keys()].map(k=>exactAt(str,{x:k,y:0}));
+    let d=vals.slice(),fct=1n;const nc=[];
+    for(let k=0;k<N;k++){if(k>0)fct*=BigInt(k);nc.push(F(d[0].n,d[0].d*fct));d=d.slice(1).map((v,i)=>fsub(v,d[i]))}
+    let deg=-1;nc.forEach((c,k)=>{if(c.n!==0n)deg=k});
+    if(deg>5)return null;
+    let poly=[F(0n)],term=[F(1n)];
+    for(let k=0;k<=Math.max(deg,0);k++){poly=padd(poly,pscale(term,nc[k]));term=pmul(term,[F(BigInt(-k)),F(1n)])}
+    for(const x of[-3,11]){const v=exactAt(str,{x,y:0}),q=peval(poly,F(BigInt(x)));if(q.n!==v.n||q.d!==v.d)return null}
+    return poly}
+  catch(e){return null}}
+function findRatRootGen(ints){
+  const n=ints.length-1,big=ints.map(BigInt);
+  for(const q of divisors(ints[n]))for(const p of divisors(ints[0]))for(const sg of[1,-1]){
+    const P=BigInt(sg*p),Q=BigInt(q);let sum=0n;
+    for(let k=0;k<=n;k++)sum+=big[k]*P**BigInt(k)*Q**BigInt(n-k);
+    if(sum===0n)return[sg*p,q]}
+  return null}
+function numRoots1(fn){
+  const roots=[],push=x=>{if(!roots.some(r=>Math.abs(r-x)<1e-6))roots.push(x)};
+  const scan=(lo,hi,step)=>{
+    let xp=lo,fp=fn(xp),fpp=NaN,xpp=NaN;
+    for(let k=1;;k++){
+      const x=lo+k*step;if(x>hi+1e-9)break;
+      const fx=fn(x);
+      if(isFinite(fp)&&isFinite(fx)){
+        if(fp===0)push(xp);
+        else if(fp*fx<0){
+          let a=xp,b=x,fa=fp;
+          for(let i=0;i<100;i++){const m=(a+b)/2,fm=fn(m);if(!isFinite(fm))break;if(fa*fm<=0)b=m;else{a=m;fa=fm}}
+          const r=(a+b)/2,fr=fn(r);
+          if(isFinite(fr)&&Math.abs(fr)<1e-6)push(r)}
+        else if(isFinite(fpp)&&Math.abs(fp)<Math.abs(fpp)&&Math.abs(fp)<Math.abs(fx)&&Math.abs(fp)<1e-3){
+          let a=xpp,b=x;
+          for(let i=0;i<80;i++){const m1=a+(b-a)/3,m2=b-(b-a)/3;if(Math.abs(fn(m1))<Math.abs(fn(m2)))b=m2;else a=m1}
+          const r=(a+b)/2;if(Math.abs(fn(r))<1e-9)push(r)}}
+      fpp=fp;xpp=xp;xp=x;fp=fx}};
+  scan(-50,50,0.01);scan(-1000,1000,0.5);
+  return roots.sort((a,b)=>a-b)}
+function nearRat(x){for(let q=1;q<=12;q++){const p=Math.round(x*q);if(Math.abs(x-p/q)<1e-9)return F(BigInt(p),BigInt(q))}return null}
+const rootItem=x=>{const r=nearRat(x);return r?{h:show(Vf(r)),n:x}:{h:d2(x),n:x,approx:true}};
+function polyRootsExact(co){
+  let c=co.slice();while(c.length&&c[c.length-1].n===0n)c.pop();
+  if(!c.length)return{identity:true};
+  if(c.length===1)return{none:true};
+  const out_=[];let approx=false,z=0;
+  while(c[0].n===0n){c.shift();z++}
+  if(z)out_.push({h:"0",n:0});
+  while(c.length-1>2){
+    const ints=ratInts(c.map(Vf)),rr=ints?findRatRootGen(ints):null;
+    if(!rr)break;
+    const r=F(BigInt(rr[0]),BigInt(rr[1]));out_.push({h:show(Vf(r)),n:Number(r.n)/Number(r.d)});
+    const n=c.length-1,b=new Array(n);b[n-1]=c[n];
+    for(let k=n-1;k>=1;k--)b[k-1]=fadd(c[k],fmul(r,b[k]));
+    c=b}
+  const deg=c.length-1;
+  if(deg===1){const r=fdiv(F(-c[0].n,c[0].d),c[1]);out_.push({h:show(Vf(r)),n:Number(r.n)/Number(r.d)})}
+  else if(deg===2)qsolve(Vf(c[2]),Vf(c[1]),Vf(c[0])).forEach(v=>out_.push({h:show(v),n:toNum(v)}));
+  else if(deg>2){
+    const fn=x=>c.reduceRight((t,f)=>t*x+Number(f.n)/Number(f.d),0);
+    numRoots1(fn).forEach(x=>out_.push(rootItem(x)));approx=true}
+  out_.sort((p,q)=>p.n-q.n);
+  return{roots:out_.filter((r,i,w)=>i===0||Math.abs(r.n-w[i-1].n)>1e-9),approx}}
+const eqMsg=t=>`<div class="res big">${t}</div>`;
+function eqOne(){
+  const str=splitEq(eqE.e1),co=polyFit1(str);
+  let roots,approx=false;
+  if(co){
+    const R=polyRootsExact(co);
+    if(R.identity)return eqMsg("Every real number is a solution");
+    if(R.none)return eqMsg("No solution");
+    roots=R.roots;approx=!!R.approx}
+  else{
+    roots=numRoots1(compileNum(str)).map(rootItem);
+    if(!roots.length)return eqMsg("No real solution found");
+    approx=roots.some(r=>r.approx)}
+  if(!roots.length)return eqMsg("No real solution");
+  let h=`<div class="res big">${roots.map(r=>`<span class="lb">x =</span>${r.h}`).join(ORX)}</div>`;
+  if(roots.some(r=>r.h.includes("<svg")))h+=sub(`≈ ${roots.map(r=>d2(r.n)).join(" or ")}`);
+  if(approx)h+=sub("approximate values, rounded to 2 decimals");
+  return h}
+// --- two variables ---
+const pe2=(P,x,y)=>[fmul(P.A2,fmul(x,x)),fmul(P.A1,fmul(x,y)),fmul(P.A0,fmul(y,y)),fmul(P.B1,x),fmul(P.B0,y),P.C].reduce(fadd);
+function polyFit2(str){
+  try{
+    const g=(x,y)=>exactAt(str,{x,y}),half=F(1n,2n);
+    const f00=g(0,0),f10=g(1,0),fm0=g(-1,0),f01=g(0,1),f0m=g(0,-1),f11=g(1,1);
+    const C=f00,A2=fsub(fmul(fadd(f10,fm0),half),C),B1=fmul(fsub(f10,fm0),half);
+    const A0=fsub(fmul(fadd(f01,f0m),half),C),B0=fmul(fsub(f01,f0m),half);
+    const A1=fsub(fsub(fsub(fsub(fsub(f11,A2),A0),B1),B0),C);
+    const P={A2,A1,A0,B1,B0,C};
+    for(const[x,y]of[[2,3],[-2,1],[3,-2],[1,-3],[2,2]]){
+      const q=pe2(P,F(BigInt(x)),F(BigInt(y))),v=g(x,y);
+      if(q.n!==v.n||q.d!==v.d)return null}
+    return P}
+  catch(e){return null}}
+const isLin=P=>P.A2.n===0n&&P.A1.n===0n&&P.A0.n===0n;
+function linQuad(L,Q){
+  const a=L.B1,b=L.B0,c=L.C;
+  if(a.n===0n&&b.n===0n)return c.n===0n?null:{none:true};
+  if(b.n!==0n){
+    const p=fdiv(F(-a.n,a.d),b),q=fdiv(F(-c.n,c.d),b);
+    const X2=fadd(fadd(Q.A2,fmul(Q.A1,p)),fmul(Q.A0,fmul(p,p)));
+    const X1=fadd(fadd(fadd(Q.B1,fmul(Q.B0,p)),fmul(Q.A1,q)),fmul(F(2n),fmul(Q.A0,fmul(p,q))));
+    const X0=fadd(fadd(Q.C,fmul(Q.B0,q)),fmul(Q.A0,fmul(q,q)));
+    let xs;
+    if(X2.n===0n){if(X1.n===0n)return X0.n===0n?{inf:true}:{none:true};xs=[Vf(fdiv(F(-X0.n,X0.d),X1))]}
+    else xs=qsolve(Vf(X2),Vf(X1),Vf(X0));
+    return{sols:xs.map(x=>[x,add(mul(Vf(p),x),Vf(q))])}}
+  const x0=fdiv(F(-c.n,c.d),a);
+  const Y2=Q.A0,Y1=fadd(fmul(Q.A1,x0),Q.B0),Y0=fadd(fadd(fmul(Q.A2,fmul(x0,x0)),fmul(Q.B1,x0)),Q.C);
+  let ys;
+  if(Y2.n===0n){if(Y1.n===0n)return Y0.n===0n?{inf:true}:{none:true};ys=[Vf(fdiv(F(-Y0.n,Y0.d),Y1))]}
+  else ys=qsolve(Vf(Y2),Vf(Y1),Vf(Y0));
+  return{sols:ys.map(y=>[Vf(x0),y])}}
+function solveSys(P1,P2){
+  const l1=isLin(P1),l2=isLin(P2);
+  if(l1&&l2){
+    const a1=P1.B1,b1=P1.B0,c1=P1.C,a2=P2.B1,b2=P2.B0,c2=P2.C;
+    const det=fsub(fmul(a1,b2),fmul(a2,b1));
+    if(det.n!==0n){
+      const x=fdiv(fsub(fmul(b1,c2),fmul(b2,c1)),det),y=fdiv(fsub(fmul(c1,a2),fmul(c2,a1)),det);
+      return{sols:[[Vf(x),Vf(y)]]}}
+    const t1=fsub(fmul(a1,c2),fmul(a2,c1)),t2=fsub(fmul(b1,c2),fmul(b2,c1));
+    const z1=a1.n===0n&&b1.n===0n,z2=a2.n===0n&&b2.n===0n;
+    if(z1&&z2)return c1.n===0n&&c2.n===0n?{inf:true}:{none:true};
+    if(z1)return c1.n===0n?{inf:true}:{none:true};
+    if(z2)return c2.n===0n?{inf:true}:{none:true};
+    return t1.n===0n&&t2.n===0n?{inf:true}:{none:true}}
+  if(l1||l2)return linQuad(l1?P1:P2,l1?P2:P1);
+  return null}
+function solveNum2(f,g){
+  const sols=[];
+  for(let x0=-10;x0<=10;x0+=2.5)for(let y0=-10;y0<=10;y0+=2.5){
+    let x=x0,y=y0,ok=false;
+    for(let it=0;it<60;it++){
+      const fx=f(x,y),gx=g(x,y);if(!isFinite(fx)||!isFinite(gx))break;
+      const h=1e-6,a=(f(x+h,y)-fx)/h,b=(f(x,y+h)-fx)/h,c=(g(x+h,y)-gx)/h,d=(g(x,y+h)-gx)/h;
+      const det=a*d-b*c;if(Math.abs(det)<1e-14)break;
+      const dx=(fx*d-b*gx)/det,dy=(a*gx-c*fx)/det;
+      x-=dx;y-=dy;
+      if(Math.abs(dx)+Math.abs(dy)<1e-12){ok=true;break}}
+    if(ok&&Math.abs(f(x,y))<1e-8&&Math.abs(g(x,y))<1e-8&&!sols.some(q=>Math.abs(q[0]-x)<1e-5&&Math.abs(q[1]-y)<1e-5))sols.push([x,y])}
+  return sols.sort((p,q)=>p[0]-q[0]||p[1]-q[1])}
+function eqTwo(){
+  const strs=[eqE.e1,eqE.e2].map(splitEq),P=strs.map(polyFit2);
+  let r=P[0]&&P[1]?solveSys(P[0],P[1]):null,pts,approx=false;
+  if(r&&r.inf)return eqMsg("Infinitely many solutions");
+  if(r&&r.none)return eqMsg("No solution");
+  if(r&&r.sols){
+    if(!r.sols.length)return eqMsg("No real solution");
+    pts=r.sols.map(([x,y])=>({x:show(x),y:show(y),nx:toNum(x),ny:toNum(y)}))}
+  else{
+    const f=compileNum(strs[0]),g=compileNum(strs[1]);
+    const ns=solveNum2(f,g);
+    if(!ns.length)return eqMsg("No real solution found");
+    approx=true;
+    pts=ns.map(([x,y])=>{const a=rootItem(x),b=rootItem(y);if(a.approx||b.approx)approx=true;return{x:a.h,y:b.h,nx:x,ny:y}})}
+  let h=pts.map((p,i)=>`<div class="res big">${pts.length>1?`<span class="lb">${i+1}.</span>`:""}<span class="lb">x =</span>${p.x}<span class="lb" style="margin-left:14px">y =</span>${p.y}</div>`).join("");
+  if(pts.some(p=>p.x.includes("<svg")||p.y.includes("<svg")))h+=sub(pts.map(p=>`(${d2(p.nx)} ; ${d2(p.ny)})`).join(" and "));
+  if(approx)h+=sub("approximate values, rounded to 2 decimals");
+  return h}
+function eqCalc(){
+  try{
+    if(eqList().some(E=>!E.root.items.length)){out.innerHTML=`<span class="dec">${etab==="one"?"Enter an equation in x":"Enter both equations in x and y"}</span>`;return}
+    out.innerHTML=etab==="one"?eqOne():eqTwo()}
+  catch(e){out.innerHTML=`<span class="dec">${e.message}</span>`}}
+// ---------- table and graph ----------
+const tabEl=document.getElementById("tab"),tE={};
+const tabList=()=>["f","g","a","b","s"].map(k=>tE[k]);
+const tabHint=document.createElement("div");
+tabHint.innerHTML='<div class="res">Table of values and graph</div><div class="dec" style="font-size:13px;margin:4px 0 10px">Enter f(x) (and g(x) if you like), the x-range and the step. Shift + ( gives x.</div>';
+tabEl.appendChild(tabHint);
+const tfld=(k,label,parent)=>{
+  const r=document.createElement("div");r.className="fld";
+  const lb=document.createElement("div");lb.className="lb2";lb.textContent=label;
+  const d=document.createElement("div");d.className="ed sm";
+  tE[k]=Ed(d);r.append(lb,d);parent.appendChild(r)};
+tfld("f","f(x) =",tabEl);tfld("g","g(x) = (optional)",tabEl);
+const tgrid=document.createElement("div");tgrid.className="fgrid3";tabEl.appendChild(tgrid);
+tfld("a","From x =",tgrid);tfld("b","To x =",tgrid);tfld("s","Step",tgrid);
+function tableHtml(xs,ys){
+  const fmt=v=>isFinite(v)?d2(v):"undefined",names=["f(x)","g(x)"];
+  return`<div class="tw"><table class="tt"><tr><th>x</th>${ys.map((_,i)=>`<th>${names[i]}</th>`).join("")}</tr>${xs.map((x,k)=>`<tr><td>${d2(x)}</td>${ys.map(c=>`<td>${fmt(c[k])}</td>`).join("")}</tr>`).join("")}</table></div>`}
+function niceTicks(lo,hi,n){
+  const raw=(hi-lo)/n,mag=Math.pow(10,Math.floor(Math.log10(raw))),m=raw/mag,step=(m<1.5?1:m<3?2:m<7?5:10)*mag,r=[];
+  for(let v=Math.ceil(lo/step-1e-9)*step;v<=hi+1e-9;v+=step)r.push(+v.toFixed(10));
+  return r}
+function graphSvg(a,b,fns,xs,ys){
+  const W=340,H=230,L=40,Rr=10,T=10,B=24,lo=a===b?a-1:a,hi=a===b?b+1:b,N=300,cols=["var(--acc)","var(--acc2)"];
+  const samp=fns.map(fn=>[...Array(N+1).keys()].map(k=>{const x=lo+(hi-lo)*k/N;return[x,fn(x,0)]}));
+  let ymin=Infinity,ymax=-Infinity;
+  samp.forEach(S=>S.forEach(([,y])=>{if(isFinite(y)&&Math.abs(y)<1e6){ymin=Math.min(ymin,y);ymax=Math.max(ymax,y)}}));
+  if(!isFinite(ymin))return"";
+  if(ymin===ymax){ymin-=1;ymax+=1}
+  const pad=(ymax-ymin)*0.08;ymin-=pad;ymax+=pad;
+  const X=x=>L+(x-lo)/(hi-lo)*(W-L-Rr),Y=y=>T+(ymax-y)/(ymax-ymin)*(H-T-B),span=ymax-ymin;
+  let h=`<svg viewBox="0 0 ${W} ${H}" class="gr">`;
+  niceTicks(lo,hi,6).forEach(v=>{const x=X(v).toFixed(1);h+=`<line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" class="gd"/><text x="${x}" y="${H-7}" text-anchor="middle">${d2(v)}</text>`});
+  niceTicks(ymin,ymax,5).forEach(v=>{const y=Y(v).toFixed(1);h+=`<line x1="${L}" x2="${W-Rr}" y1="${y}" y2="${y}" class="gd"/><text x="${L-4}" y="${(+y+3).toFixed(1)}" text-anchor="end">${d2(v)}</text>`});
+  if(ymin<=0&&ymax>=0)h+=`<line x1="${L}" x2="${W-Rr}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" class="ax"/>`;
+  if(lo<=0&&hi>=0)h+=`<line x1="${X(0).toFixed(1)}" x2="${X(0).toFixed(1)}" y1="${T}" y2="${H-B}" class="ax"/>`;
+  h+=`<rect x="${L}" y="${T}" width="${W-L-Rr}" height="${H-T-B}" fill="none" class="ax" style="opacity:.45"/>`;
+  samp.forEach((S,i)=>{
+    let d="",pen=false,prev=null;
+    for(const[x,y]of S){
+      const ok=isFinite(y)&&Math.abs(y)<1e6&&y>=ymin-span&&y<=ymax+span;
+      if(!ok||(prev!==null&&Math.abs(y-prev)>span*1.5)){pen=false;prev=ok?y:null;if(!ok)continue}
+      d+=(pen?"L":"M")+X(x).toFixed(1)+" "+Y(y).toFixed(1);pen=true;prev=y}
+    h+=`<path d="${d}" fill="none" style="stroke:${cols[i]}" stroke-width="1.8"/>`;
+    xs.forEach((x,k)=>{const y=ys[i][k];if(isFinite(y)&&y>=ymin&&y<=ymax)h+=`<circle cx="${X(x).toFixed(1)}" cy="${Y(y).toFixed(1)}" r="2.6" style="fill:${cols[i]}"/>`})});
+  if(fns.length>1)h+=`<text x="${L+6}" y="${T+12}" style="fill:${cols[0]}">f(x)</text><text x="${L+40}" y="${T+12}" style="fill:${cols[1]}">g(x)</text>`;
+  return h+"</svg>"}
+function tabCalc(){
+  try{
+    if(["f","a","b","s"].some(k=>!tE[k].root.items.length)){out.innerHTML='<span class="dec">Enter f(x), the from and to values, and the step</span>';return}
+    const num=k=>toNum(evaluate(ser(tE[k].root)));
+    const a=num("a"),b=num("b"),s=num("s");
+    if(!(s>0)||!(b>=a))throw Error("Check the range: from ≤ to, and the step must be positive");
+    const cnt=Math.floor((b-a)/s+1e-9)+1;
+    if(cnt>201)throw Error("Too many points (at most 201). Use a bigger step");
+    const fns=[compileNum(ser(tE.f.root))];
+    if(tE.g.root.items.length)fns.push(compileNum(ser(tE.g.root)));
+    const xs=[...Array(cnt).keys()].map(k=>+(a+k*s).toFixed(10)),ys=fns.map(fn=>xs.map(x=>fn(x,0)));
+    out.innerHTML=graphSvg(a,b,fns,xs,ys)+tableHtml(xs,ys)}
+  catch(e){out.innerHTML=`<span class="dec">${e.message}</span>`}}
+// ---------- triangle solver ----------
+const triEl=document.getElementById("tri"),trE={};
+const triList=()=>["a","b","c","A","B","C"].map(k=>trE[k]);
+const triHint=document.createElement("div"),triDraw=document.createElement("div");
+triHint.innerHTML='<div class="dec" style="font-size:13px;margin:0 0 8px">Enter any three measurements of triangle ABC (at least one side). Angles are in degrees.</div>';
+triEl.append(triHint,triDraw);
+const tgS=document.createElement("div"),tgA=document.createElement("div");tgS.className=tgA.className="fgrid3";
+triEl.append(tgS,tgA);
+[["a","Side a",tgS],["b","Side b",tgS],["c","Side c",tgS],["A","Angle A",tgA],["B","Angle B",tgA],["C","Angle C",tgA]].forEach(([k,l,par_])=>{
+  const r=document.createElement("div");r.className="fld";
+  const lb=document.createElement("div");lb.className="lb2";lb.textContent=l;
+  const d=document.createElement("div");d.className="ed sm";
+  trE[k]=Ed(d);r.append(lb,d);par_.appendChild(r)});
+function solveTri(g){
+  const R=Math.PI/180,sin=d=>Math.sin(d*R),cos=d=>Math.cos(d*R);
+  const acos_=x=>Math.acos(Math.max(-1,Math.min(1,x)))/R,asin_=x=>Math.asin(x)/R;
+  const S=["a","b","c"],T=["A","B","C"],ks=S.filter(k=>g[k]!==undefined),ka=T.filter(k=>g[k]!==undefined);
+  if(!ks.length)throw Error("At least one side is needed");
+  const mk=(s,an)=>({a:s[0],b:s[1],c:s[2],A:an[0],B:an[1],C:an[2]});
+  let sols=[];
+  if(ks.length===3){
+    const[a,b,c]=S.map(k=>g[k]);
+    if(a+b<=c||a+c<=b||b+c<=a)throw Error("These sides cannot form a triangle");
+    const A_=acos_((b*b+c*c-a*a)/(2*b*c)),B_=acos_((a*a+c*c-b*b)/(2*a*c));
+    sols=[mk([a,b,c],[A_,B_,180-A_-B_])]}
+  else if(ks.length===1){
+    const ang=T.map(k=>g[k]),m=ang.findIndex(v=>v===undefined),sum=ang.reduce((t,v)=>t+(v===undefined?0:v),0);
+    if(sum>=180)throw Error("The two angles must add up to less than 180°");
+    ang[m]=180-sum;
+    const i=S.indexOf(ks[0]),k=g[ks[0]]/sin(ang[i]);
+    sols=[mk(ang.map(v=>k*sin(v)),ang)]}
+  else{
+    const m=T.indexOf(ka[0]),angle=g[ka[0]],sides=S.map(k=>g[k]),third=sides.findIndex(v=>v===undefined);
+    if(m===third){
+      const[i,j]=[0,1,2].filter(x=>x!==third);
+      const sk=Math.sqrt(sides[i]**2+sides[j]**2-2*sides[i]*sides[j]*cos(angle)),s=sides.slice();s[third]=sk;
+      const Ai=acos_((s[j]**2+sk**2-s[i]**2)/(2*s[j]*sk)),an=[0,0,0];
+      an[third]=angle;an[i]=Ai;an[j]=180-angle-Ai;
+      sols=[mk(s,an)]}
+    else{
+      const o=[0,1,2].find(x=>x!==m&&x!==third),sm=sides[m],so=sides[o],sinO=so*sin(angle)/sm;
+      if(sinO>1+1e-12)throw Error("No triangle exists with these measurements");
+      const cands=Math.abs(sinO-1)<1e-12?[90]:[asin_(sinO),180-asin_(sinO)];
+      cands.forEach(Ao=>{
+        if(angle+Ao>=180-1e-9)return;
+        const an=[0,0,0];an[m]=angle;an[o]=Ao;an[third]=180-angle-Ao;
+        const k=sm/sin(angle);sols.push(mk(an.map(v=>k*sin(v)),an))})}
+    if(!sols.length)throw Error("No triangle exists with these measurements")}
+  return sols}
+function drawTri(sol,given){
+  const W=300,H=190,R=Math.PI/180;
+  let pts;
+  if(sol){
+    const P=[[0,0],[sol.c,0],[sol.b*Math.cos(sol.A*R),sol.b*Math.sin(sol.A*R)]];
+    const xs=P.map(p=>p[0]),minx=Math.min(...xs),maxx=Math.max(...xs),maxy=P[2][1],m=40;
+    const sc=Math.min((W-2*m)/(maxx-minx),(H-2*m)/maxy),ox=m+((W-2*m)-(maxx-minx)*sc)/2,oy=H-m-((H-2*m)-maxy*sc)/2;
+    pts=P.map(([x,y])=>[ox+(x-minx)*sc,oy-y*sc])}
+  else pts=[[40,150],[260,150],[190,36]];
+  const cen=[0,1].map(i=>(pts[0][i]+pts[1][i]+pts[2][i])/3),nm=["A","B","C"],sd=["a","b","c"];
+  const cls=k=>given&&given.has(k)?' class="gv"':"";
+  let h=`<svg viewBox="0 0 ${W} ${H}" class="tri"><polygon points="${pts.map(p=>p.map(v=>v.toFixed(1)).join(",")).join(" ")}"/>`;
+  pts.forEach((p,i)=>{
+    const dx=p[0]-cen[0],dy=p[1]-cen[1],L=Math.hypot(dx,dy)||1;
+    h+=`<text x="${(p[0]+dx/L*14).toFixed(1)}" y="${(p[1]+dy/L*14+4).toFixed(1)}" text-anchor="middle" font-weight="700">${nm[i]}</text>`;
+    if(sol)h+=`<text x="${(p[0]-dx/L*32).toFixed(1)}" y="${(p[1]-dy/L*32+4).toFixed(1)}" text-anchor="middle"${cls(nm[i])}>${d2(sol[nm[i]])}°</text>`});
+  [[1,2],[0,2],[0,1]].forEach(([i,j],k)=>{
+    const mx=(pts[i][0]+pts[j][0])/2,my=(pts[i][1]+pts[j][1])/2,dx=mx-cen[0],dy=my-cen[1],L=Math.hypot(dx,dy)||1;
+    h+=`<text x="${(mx+dx/L*16).toFixed(1)}" y="${(my+dy/L*16+4).toFixed(1)}" text-anchor="middle"${cls(sd[k])}>${sol?d2(sol[sd[k]]):sd[k]}</text>`});
+  triDraw.innerHTML=h+"</svg>"}
+function triCalc(){
+  const keys6=["a","b","c","A","B","C"],have=keys6.filter(k=>trE[k].root.items.length);
+  try{
+    const g={};have.forEach(k=>{
+      const v=toNum(evaluate(ser(trE[k].root)));
+      if(!(v>0))throw Error("Every measurement must be positive");
+      if(/[ABC]/.test(k)&&v>=180)throw Error("Angles must be less than 180°");
+      g[k]=v});
+    if(have.length<3){drawTri(null,null);out.innerHTML=`<span class="dec">Enter ${3-have.length===3?"three measurements":`${3-have.length} more measurement${3-have.length>1?"s":""}`} (${have.length} of 3)</span>`;return}
+    if(have.length>3)throw Error("Enter exactly three measurements");
+    const sols=solveTri(g),given=new Set(have);
+    drawTri(sols[0],given);
+    let h="";
+    sols.forEach((s,i)=>{
+      const area=0.5*s.b*s.c*Math.sin(s.A*Math.PI/180),per=s.a+s.b+s.c,mx=Math.max(s.A,s.B,s.C);
+      const eq=(x,y)=>Math.abs(x-y)<1e-9*Math.max(x,y,1);
+      const kind=eq(s.a,s.b)&&eq(s.b,s.c)?"Equilateral":(eq(s.a,s.b)||eq(s.b,s.c)||eq(s.a,s.c))?"Isosceles":"Scalene";
+      const ang=Math.abs(mx-90)<1e-7?"right-angled":mx>90?"obtuse":"acute";
+      if(sols.length>1)h+=`<div class="dec" style="margin-top:6px">Solution ${i+1}</div>`;
+      h+=stt([k_("a",d2(s.a)),k_("A",d2(s.A)+"°"),k_("b",d2(s.b)),k_("B",d2(s.B)+"°"),k_("c",d2(s.c)),k_("C",d2(s.C)+"°"),k_("Area",d2(area)),k_("Perimeter",d2(per))]);
+      h+=sub(`${kind}, ${ang} triangle`)});
+    if(sols.length>1)h+=sub("Two triangles fit these measurements (SSA); the drawing shows solution 1");
+    out.innerHTML=h}
+  catch(e){drawTri(null,null);out.innerHTML=`<span class="dec">${e.message}</span>`}}
+drawTri(null,null);
+// ---------- modes ----------
+const MODES=[{id:"calc",name:"Calculator"},{id:"geo",name:"Analytical geometry"},{id:"fin",name:"Finance"},{id:"fn",name:"Functions"},{id:"pat",name:"Number patterns"},{id:"stat",name:"Statistics"},{id:"eq",name:"Equation solver"},{id:"tab",name:"Table & graph"},{id:"tri",name:"Triangle solver"}];
+const modeBtn=document.getElementById("mode"),menu=document.getElementById("menu");
+function setMode(id){
+  mode=id;
+  document.getElementById("calcp").hidden=id!=="calc";
+  geo.hidden=id!=="geo";finEl.hidden=id!=="fin";fnEl.hidden=id!=="fn";patEl.hidden=id!=="pat";statEl.hidden=id!=="stat";eqEl.hidden=id!=="eq";tabEl.hidden=id!=="tab";triEl.hidden=id!=="tri";out.classList.toggle("big",id==="tab"||id==="tri");menu.hidden=true;
+  modeBtn.textContent=MODES.find(m=>m.id===id).name+" ▾";
+  Object.keys(menuBtns).forEach(k=>menuBtns[k].classList.toggle("on",k===id));
+  out.innerHTML="";
+  (id==="calc"?mainE:grp()[0]).host.focus({preventScroll:true});
+  refresh()}
+const MGROUPS=[["Calculator & solvers",["calc","eq","tab","tri"]],["Math topics",["geo","fin","fn","pat","stat"]]],menuBtns={};
+MGROUPS.forEach(([title,ids],gi)=>{
+  if(gi){const sp=document.createElement("div");sp.className="sep";menu.appendChild(sp)}
+  const h=document.createElement("div");h.className="mh";h.textContent=title;menu.appendChild(h);
+  ids.forEach(id=>{const b=document.createElement("button");b.textContent=MODES.find(m=>m.id===id).name;b.onclick=()=>setMode(id);menuBtns[id]=b;menu.appendChild(b)})});
+const amenu=document.getElementById("amenu"),aBtn=document.getElementById("amode");
+[["deg","Degrees"],["rad","Radians"]].forEach(([id,name])=>{
+  const b=document.createElement("button");b.textContent=name;if(id==="deg")b.className="on";
+  b.onclick=()=>{angleMode=id;aBtn.textContent=(id==="deg"?"DEG":"RAD")+" ▾";amenu.hidden=true;[...amenu.children].forEach(x=>x.classList.toggle("on",x===b));refresh()};
+  amenu.appendChild(b)});
+modeBtn.onclick=()=>{menu.hidden=!menu.hidden;amenu.hidden=true};
+aBtn.onclick=()=>{amenu.hidden=!amenu.hidden;menu.hidden=true};
+document.addEventListener("click",e=>{if(!e.target.closest(".dd")){menu.hidden=true;amenu.hidden=true}});
+// ---------- actions ----------
+let shiftOn=false,justEval=false;
+function primeFactors(n){const r=[];for(let p=2;p*p<=n;p++){let e=0;while(n%p===0){n/=p;e++}if(e)r.push([p,e])}if(n>1)r.push([n,1]);return r}
+// ---------- history of results ----------
+const history=[];
+function cloneItems(items,host){
+  return items.map(it=>{
+    if(!isN(it))return it;
+    const n={...it};n.host=host;
+    ["a","b","c"].forEach(k=>{if(it[k]){n[k]=mkSeq(n);n[k].items=cloneItems(it[k].items,n[k])}});
+    return n})}
+const rBox=document.createElement("div");rBox.className="rbox";rBox.hidden=true;
+document.getElementById("calcp").insertBefore(rBox,document.getElementById("calcp").firstChild);
+function boxFor(h,i,cls){
+  const box=document.createElement("div");box.className=cls;box.tabIndex=0;box.title="Tap to edit this calculation";
+  const ex=document.createElement("div");ex.className="hexp";ex.appendChild(R(h.seq));
+  const rs=document.createElement("div");rs.className="hres";
+  rs.innerHTML=`= ${h.main}${h.dec?` <span class="dec">${h.dec}</span>`:""}`;
+  box.append(ex,rs);
+  box.onclick=()=>useHistory(i);
+  box.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();useHistory(i)}};
+  return box}
+function renderHistory(){
+  rBox.replaceChildren();rBox.hidden=!history.length;
+  // the two latest steps, oldest first so the newest sits next to the input
+  history.slice(0,2).map((h,i)=>[h,i]).reverse().forEach(([h,i])=>rBox.appendChild(boxFor(h,i,"hbox rline")))}
+function useHistory(i){
+  const h=history[i];if(!h)return;
+  activate(mainE);
+  mainE.root.items=cloneItems(h.seq.items,mainE.root);
+  mainE.cur={seq:mainE.root,i:mainE.root.items.length};
+  root0=mainE.root;cur=mainE.cur;sel=null;justEval=false;
+  out.innerHTML="";redraw();
+  mainE.host.focus({preventScroll:true});
+  mainE.host.scrollIntoView({block:"nearest"})}
+function pushHistory(key,main,dec){
+  if(history.length&&history[0].key===key)history.shift();
+  const seq={items:[],parent:null};seq.items=cloneItems(A.root.items,seq);
+  history.unshift({key,seq,main,dec});
+  if(history.length>2)history.pop();
+  renderHistory()}
+function calc(){
+  try{
+    const key=ser(A.root),v=evaluate(key);
+    const it=A.root.items,sole=it.length===1&&isN(it[0])&&it[0].t==="par"&&it[0].fn==="factor";
+    if(FACT&&!sole)throw Error("Fact works on its own: Fact(number)");
+    let main,dec="";
+    if(FACT){
+      const r=ratOf(v);
+      if(!isRat(v)||r.d!==1n||r.n<2n||r.n>10000000000000n)throw Error("Fact needs a whole number from 2 to 10 000 000 000 000");
+      const n=Number(r.n),pf=primeFactors(n);
+      main=pf.length===1&&pf[0][1]===1?`${n} is a prime number`:`${n} = ${pf.map(([p,e])=>e>1?`${p}<sup>${e}</sup>`:p).join(" × ")}`}
+    else{
+      const decShown=v[APX]||keys(v).some(k=>v[k].d>100000000n),isInt=isRat(v)&&(!keys(v).length||ratOf(v).d===1n);
+      main=show(v);
+      dec=(decShown||isInt)?"":`≈ ${cm(+toNum(v).toPrecision(10))}`}
+    lastAns=v;justEval=true;
+    out.innerHTML=`<div>${main}</div>${dec?`<div class="dec">${dec}</div>`:""}`;
+    pushHistory(key,main,dec)}
+  catch(e){justEval=false;out.innerHTML=`<span class="err">${e.message}</span>`}}
+function clearAll(){
+  if(mode!=="calc"){grp().filter(E=>E!==finE.m).forEach(E=>{E.root.items=[];E.cur={seq:E.root,i:0}});root0=A.root;cur=A.cur}
+  else{root0.items=[];cur={seq:root0,i:0}}
+  justEval=false;out.innerHTML=""}
+function nextField(){const L=grp(),k=L.indexOf(A);L[(k+1)%L.length].host.focus({preventScroll:true})}
+const par=(lab,fn)=>()=>insNode("par",null,{lab,fn});
+const act={
+  "a/b":()=>insNode("frac"),"mixed":()=>insNode("mixed"),"√":()=>insNode("sqrt"),"nroot":()=>insNode("nroot"),
+  "x²":()=>insNode("pow",["2"]),"pow":()=>insNode("pow"),"log":()=>insNode("log"),"fact":()=>ins("!"),
+  "exp10":()=>{ins("*");ins("1");ins("0");insNode("pow")},
+  "sin":par("sin","sin"),"cos":par("cos","cos"),"tan":par("tan","tan"),
+  "asin":par("sin⁻¹","asin"),"acos":par("cos⁻¹","acos"),"atan":par("tan⁻¹","atan"),"Fact":par("Fact","factor"),
+  "(":par("",""),")":closeParen,
+  "π":()=>ins("π"),"e":()=>ins("e"),"Ans":()=>ins("Ans"),"Abs":par("Abs","abs"),"ln":par("ln","ln"),"log10":par("log","log"),"M":()=>ins("M"),"x":()=>ins("x"),"y":()=>ins("y"),"%":()=>ins("%"),
+  "neg":()=>ins("-"),"inv":()=>insNode("pow",["-","1"]),"nCr":()=>ins("C"),"nPr":()=>ins("P"),
+  "÷":()=>ins("/"),"×":()=>ins("*"),"−":()=>ins("-"),
+  "◀":left,"▶":right,"▲":()=>vert(false),"▼":()=>vert(true),"⌫":back,"AC":clearAll,
+  "=":()=>mode==="calc"?calc():mode==="eq"?ins("="):nextField(),
+  "enter":()=>mode==="calc"?calc():nextField()};
+function refresh(){redraw();if(mode==="geo")geoCalc();if(mode==="fin")finCalc();if(mode==="fn")fnCalc();if(mode==="pat")patCalc();if(mode==="stat")statCalc();if(mode==="eq")eqCalc();if(mode==="tab")tabCalc();if(mode==="tri")triCalc()}
+const OPKEYS=new Set(["+","−","×","÷","x²","pow","fact","exp10","%","inv","nCr","nPr"]),NAVKEYS=new Set(["◀","▶","▲","▼","⌫"]);
+function applySel(k){ // a selected piece of text is replaced by what is typed next
+  const s=sel;sel=null;
+  if(!s||s.E!==A||s.from>=s.to)return false;
+  if(k==="◀"){cur={seq:s.seq,i:s.from};return true}
+  if(k==="▶"){cur={seq:s.seq,i:s.to};return true}
+  if(k==="="||k==="enter"||k==="AC"||k==="▲"||k==="▼")return false;
+  s.seq.items.splice(s.from,s.to-s.from);cur={seq:s.seq,i:s.from};
+  justEval=false;
+  return k==="⌫"}
+const memEl=document.getElementById("memb"),memBtn=document.getElementById("memv");
+function updMem(){memEl.hidden=!memory;if(memory)memBtn.innerHTML="M = "+show(memory)}
+memBtn.onclick=()=>press("M");
+document.getElementById("memx").onclick=()=>{memory=null;updMem()};
+function memAdd(){
+  try{
+    let v=null;
+    if(A===mainE&&mainE.root.items.length)v=evaluate(ser(mainE.root));
+    else if(lastAns)v=lastAns;
+    if(!v)throw Error("Nothing to store yet: enter a value or press = first");
+    const apxF=v[APX]||(memory&&memory[APX]);
+    memory=memory?add(memory,v):{...v};
+    if(apxF)memory[APX]=true;
+    updMem()}
+  catch(e){out.innerHTML=`<span class="err">${e.message}</span>`}}
+function press(k){
+  if(!A)return;
+  if(k==="M+"){memAdd();return}
+  if(applySel(k)){A.cur=cur;refresh();A.host.focus({preventScroll:true});return}
+  if(mode==="calc"&&justEval&&k!=="="&&k!=="enter"){
+    if(NAVKEYS.has(k))justEval=false;
+    else if(k!=="AC"){ // after "=": an operator continues from the answer, anything else starts afresh
+      root0.items=[];cur={seq:root0,i:0};
+      if(OPKEYS.has(k))ins("Ans");
+      justEval=false}}
+  if(act[k])act[k]();else ins(k);
+  A.cur=cur;refresh();if(k!=="="&&k!=="enter")A.host.focus({preventScroll:true})}
+const FRL='<span class="fr"><span>□</span><span>□</span></span>';
+const SQB='<span class="sx">'+RAD+'<span class="sq">□</span></span>';
+const KEYS=[
+  {id:"Shift",l:"Shift",cls:"sh"},{id:"◀",l:"◀"},{id:"▶",l:"▶"},{id:"⌫",l:"⌫"},{id:"AC",l:"AC",cls:"ac"},
+  {id:"a/b",l:FRL,alt:{id:"mixed",l:'<span class="mixl">□<span class="fr"><span>□</span><span>□</span></span></span>'},cls:"op"},
+  {id:"√",l:SQB,alt:{id:"nroot",l:'<sup>□</sup>'+SQB},cls:"op"},
+  {id:"x²",l:"x<sup>2</sup>",alt:{id:"pow",l:"x<sup>□</sup>"},cls:"op"},
+  {id:"log",l:"log<sub>□</sub>(□)",alt:{id:"ln",l:"ln"},cls:"op"},
+  {id:"log10",l:"log",alt:{id:"exp10",l:"×10<sup>□</sup>"},cls:"op"},
+  {id:"sin",l:"sin",alt:{id:"asin",l:"sin<sup>−1</sup>"},cls:"op"},{id:"cos",l:"cos",alt:{id:"acos",l:"cos<sup>−1</sup>"},cls:"op"},
+  {id:"tan",l:"tan",alt:{id:"atan",l:"tan<sup>−1</sup>"},cls:"op"},
+  {id:"(",l:"(",alt:{id:"x",l:"x"},cls:"num"},{id:")",l:")",alt:{id:"y",l:"y"},cls:"num"},
+  {id:"7",l:"7",cls:"num"},{id:"8",l:"8",cls:"num"},{id:"9",l:"9",cls:"num"},
+  {id:"×",l:"×",alt:{id:"Fact",l:"Fact"},cls:"op num"},{id:"÷",l:"÷",alt:{id:"inv",l:"x<sup>−1</sup>"},cls:"op num"},
+  {id:"4",l:"4",cls:"num"},{id:"5",l:"5",cls:"num"},{id:"6",l:"6",cls:"num"},
+  {id:"+",l:"+",alt:{id:"Abs",l:"Abs"},cls:"op num"},{id:"−",l:"−",alt:{id:"neg",l:"(−)"},cls:"op num"},
+  {id:"1",l:"1",cls:"num"},{id:"2",l:"2",alt:{id:"e",l:"e"},cls:"num"},{id:"3",l:"3",alt:{id:"π",l:"π"},cls:"num"},
+  {id:"fact",l:"x!",alt:{id:"nCr",l:"nCr"},cls:"op num"},{id:"=",l:"=",cls:"eq tall"},
+  {id:"0",l:"0",cls:"num"},{id:".",l:".",cls:"num"},{id:"Ans",l:"Ans",alt:{id:"M+",l:"M+"},cls:"op"},
+  {id:"%",l:"%",alt:{id:"nPr",l:"nPr"},cls:"op num"}];
+const keyBtns=[];
+function setShift(on){
+  shiftOn=on;
+  keyBtns.forEach(({b,k})=>{
+    if(k.id==="Shift")b.classList.toggle("on",on);
+    else if(k.alt){b.innerHTML=on?k.alt.l:k.l;b.classList.toggle("alt-on",on)}})}
+KEYS.forEach(k=>{
+  const b=document.createElement("button");b.innerHTML=k.l;
+  if(k.cls)b.className=k.cls;
+  b.onmousedown=e=>e.preventDefault();
+  b.onclick=()=>{
+    if(k.id==="Shift"){setShift(!shiftOn);return}
+    const id=(shiftOn&&k.alt)?k.alt.id:k.id;
+    setShift(false);press(id)};
+  keyBtns.push({b,k});
+  document.getElementById("keys").appendChild(b)});
+const sideEl=document.querySelector(".side"),kt=document.getElementById("kt");
+const sync=()=>{const r=document.documentElement.style;r.setProperty("--kh",sideEl.offsetHeight+"px");r.setProperty("--oh",(out.offsetHeight+8)+"px")};
+new ResizeObserver(sync).observe(sideEl);new ResizeObserver(sync).observe(out);
+kt.onmousedown=e=>e.preventDefault();
+kt.onclick=()=>{sideEl.classList.toggle("collapsed");kt.textContent=sideEl.classList.contains("collapsed")?"⌨ Show keypad":"⌨ Hide keypad"};
+activate(mainE);setMode("calc");
+</script></body></html>
